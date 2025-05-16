@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt 
 from track import load_track
 
-track_name = "Austin"
+track_name = "Budapest"
 # Load and unpack
 track = load_track(track_name)
 

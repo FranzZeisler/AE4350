@@ -6,7 +6,7 @@ from track import load_track
 from evolve import run_evolution
 
 if __name__ == "__main__":
-    track = load_track("Austin")
+    track = load_track("Budapest")
 
     # Neural controller
     genome_size = 674  # Example size
@@ -16,7 +16,7 @@ if __name__ == "__main__":
         genome_length=genome_size,
         pop_size=50,
         num_parents=10,
-        mutation_std=0.3,
+        mutation_std=0.1,
         generations=100,
         render=False
     )

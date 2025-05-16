@@ -22,7 +22,7 @@ def compute_centerline_progress(track):
 def simulate_track_neural(genome, track, render=True, return_progress=False):
     car = Car(x=track["x_c"][0], y=track["y_c"][0], heading=track["heading"][0])
     dt = car.dt
-    max_time = 1500.0
+    max_time = 800.0
 
     track_polygon = build_track_polygon(track)
     centerline, cumulative_lengths = compute_centerline_progress(track)
@@ -31,10 +31,10 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
     nn = NeuralController(genome)
 
     fitness = 0.0
-    off_track_penalty = 1000.0
-    lateral_penalty_coeff = 5.0
+    off_track_penalty = 0.1
+    lateral_penalty_coeff = 10.0
     progress_reward_coeff = 100.0
-    lap_completion_bonus = 10000.0
+    lap_completion_bonus = 2.0
 
     last_progress = 0.0
     positions = []
@@ -51,7 +51,7 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
 
         car_point = Point(car.pos[0], car.pos[1])
         if not track_polygon.contains(car_point):
-            fitness -= off_track_penalty
+            fitness *= off_track_penalty
             break
 
         distances = np.linalg.norm(centerline - car.pos, axis=1)
@@ -67,8 +67,8 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
         fitness -= lateral_penalty_coeff * lateral_error
 
         # Early finish if lap complete
-        if current_progress >= 0.95 * track_length:
-            fitness += lap_completion_bonus
+        if current_progress >= 0.99 * track_length:
+            fitness *= lap_completion_bonus
             print(f"Lap completed at time {time_elapsed:.2f}s with fitness {fitness:.2f}")
             break
 
