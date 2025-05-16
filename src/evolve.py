@@ -61,7 +61,11 @@ def run_evolution(
             best_fitness = fitnesses[max_fitness_idx]
             best_genome = population[max_fitness_idx]
 
-        print(f"Generation {gen + 1} Best Fitness: {best_fitness:.2f}")
+        # Estimate progress % for best genome
+        best_fitness_genome = population[max_fitness_idx]
+        _, lap_time, best_progress = simulate_function(best_fitness_genome, track, render=False, return_progress=True)
+        lap_percent = 100.0 * best_progress
+        print(f"Generation {gen + 1} Best Fitness: {best_fitness:.2f} | Lap Completion: {lap_percent:.1f}%")
 
         population = evolve_population(population, fitnesses, num_parents, mutation_std)
 
