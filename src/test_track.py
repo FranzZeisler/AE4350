@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt 
-from track_load import load_track
+from track import load_track
 
 track_name = "Austin"
 # Load and unpack
