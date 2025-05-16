@@ -13,11 +13,10 @@ raceline = track["raceline"]
 # === Plot ===
 plt.figure(figsize=(10, 8))
 plt.plot(x_c, y_c, label="Centerline", color="orange")
-plt.plot(x_l, y_l, label="Left Boundary", color="blue")
-plt.plot(x_r, y_r, label="Right Boundary", color="teal")
-
-if raceline is not None:
-    plt.plot(raceline[:, 0], raceline[:, 1], label="Reference Raceline", linestyle="--", color="black")
+# Plot left and right boundaries, but only label one to avoid duplicate legend entries
+plt.plot(x_l, y_l, color="blue", label="Boundary")
+plt.plot(x_r, y_r, color="blue")
+plt.plot(raceline[:, 0], raceline[:, 1], label="Reference Raceline", linestyle="--", color="black")
 
 plt.axis("equal")
 plt.title(f"Track: {track_name.capitalize()}")
