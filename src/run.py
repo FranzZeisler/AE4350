@@ -1,6 +1,34 @@
-from simulate import simulate_track
+import numpy as np
+from simulate_neural import simulate_track_neural
+from simulate_pid import simulate_track_pid
+from simulate_pursuit import simulate_track_pursuit
 from track import load_track
+from evolve import run_evolution
 
 if __name__ == "__main__":
-    track = load_track("Silverstone")
-    simulate_track(track)
+    track = load_track("Austin")
+
+    # Neural controller
+    genome_size = 674  # Example size
+    best_genome, best_fitness = run_evolution(
+        simulate_function=simulate_track_neural,
+        track=track,
+        genome_length=genome_size,
+        pop_size=20,
+        num_parents=10,
+        mutation_std=0.1,
+        generations=20,
+        render=False,
+    )
+
+    print("Best fitness found:", best_fitness)
+    # Visualize the best genome
+    simulate_track_neural(best_genome, track, render=True)
+
+
+    # PID controller
+    # simulate_track_pid(track)
+
+    # Pure pursuit controller
+    # simulate_track_pursuit(track)
+

@@ -4,7 +4,7 @@ class Car:
     def __init__(self, x, y, heading):
         self.pos = np.array([x, y], dtype=float)
         self.heading = heading  # radians
-        self.speed = 0.0        # m/s
+        self.speed = 2.0        # m/s
         self.velocity = np.array([0.0, 0.0])
         self.wheelbase = 3.6    # meters
 
@@ -14,7 +14,7 @@ class Car:
         self.top_speed = 100.0      # m/s
         self.max_steer_rate = np.deg2rad(2.0)  # radians per step
         self.steering_angle = 0.0   # radians
-        self.dt = 0.005             # seconds
+        self.dt = 0.05             # seconds
 
         self.last_lat_accel = 0.0
         self.last_centripetal = 0.0
