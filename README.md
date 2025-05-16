@@ -39,7 +39,7 @@ pip install -r requirements.txt
 - This process is repeated for a set number of generations or until convergence.
 - The final evolved controller is tested on both seen and unseen tracks to evaluate performance and generalization.
 
-### 4. 🧑‍🏫 Author
+### 4. Author
 
 This project was developed as part of the AE4350 – Bio-Inspired Intelligence for Aerospace course at TU Delft.
 
