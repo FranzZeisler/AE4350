@@ -29,7 +29,12 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
     track_length = cumulative_lengths[-1]
 
     nn = NeuralController(genome)
+
     fitness = 0.0
+    off_track_penalty = 1000.0
+    lateral_penalty_coeff = 5.0
+    progress_reward_coeff = 100.0
+    lap_completion_bonus = 10000.0
 
     last_progress = 0.0
     positions = []
@@ -39,37 +44,32 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
         obs = extract_features(car, track, centerline)
         steer, throttle = nn.forward(obs)
         throttle = max(0.0, throttle)  # no reverse
+
         car.update(steer, throttle)
         positions.append(car.pos.copy())
         time_elapsed += dt
 
-        # Off-track check - immediate penalty and stop
         car_point = Point(car.pos[0], car.pos[1])
         if not track_polygon.contains(car_point):
-            fitness -= 10000  # heavy penalty
+            fitness -= off_track_penalty
             break
 
-        # Nearest centerline point
         distances = np.linalg.norm(centerline - car.pos, axis=1)
         closest_idx = np.argmin(distances)
-        current_progress = cumulative_lengths[closest_idx]
 
-        # Reward progress, ramp up reward the further along
+        current_progress = cumulative_lengths[closest_idx]
         progress_delta = current_progress - last_progress
         if progress_delta > 0:
-            progress_fraction = current_progress / track_length
-            multiplier = 1 + 2 * progress_fraction  # ramps 1 → 3
-            fitness += progress_delta * multiplier
+            fitness += progress_reward_coeff * progress_delta
             last_progress = current_progress
+                
+        lateral_error = np.linalg.norm(car.pos - centerline[closest_idx])
+        fitness -= lateral_penalty_coeff * lateral_error
 
-            # Bonus for being near centerline (within 0–2 meters gives full reward)
-            lateral_error = np.linalg.norm(car.pos - centerline[closest_idx])
-            centerline_bonus = max(0, 1 - (lateral_error / 2)) * progress_delta * 0.5  # 0.5 weight
-            fitness += centerline_bonus
-
-        # Optional: finish early if lap complete
+        # Early finish if lap complete
         if current_progress >= 0.95 * track_length:
-            fitness += 10000  # bonus for finishing lap
+            fitness += lap_completion_bonus
+            print(f"Lap completed at time {time_elapsed:.2f}s with fitness {fitness:.2f}")
             break
 
     if render:
@@ -84,7 +84,7 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
         plt.title("Neural Network Controller Trajectory")
         plt.show()
 
-    progress_ratio = last_progress / track_length
     if return_progress:
-        return fitness, time_elapsed, progress_ratio
-    return fitness, time_elapsed
+        return fitness, time_elapsed, last_progress / track_length
+    else:
+        return fitness, time_elapsed

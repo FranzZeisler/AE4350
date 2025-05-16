@@ -18,9 +18,9 @@ def select_parents(population, fitnesses, num_parents):
     selected = [population[i] for i in sorted_indices[:num_parents]]
     return selected
 
-def evolve_population(population, fitnesses, num_parents, mutation_std):
+def evolve_population(population, fitnesses, num_parents, mutation_std, elite):
     parents = select_parents(population, fitnesses, num_parents)
-    new_population = []
+    new_population = [elite.copy()]  # Elitism: carry over best genome unchanged
 
     while len(new_population) < len(population):
         if len(parents) >= 2:
@@ -33,7 +33,6 @@ def evolve_population(population, fitnesses, num_parents, mutation_std):
         new_population.append(child)
 
     return np.array(new_population)
-
 
 def run_evolution(
     simulate_function,
@@ -52,21 +51,31 @@ def run_evolution(
     for gen in range(generations):
         fitnesses = []
         for genome in population:
-            fitness, lap_time = simulate_function(genome, track, render=render)
+            fitness, _ = simulate_function(genome, track, render=render)
             fitnesses.append(fitness)
 
         fitnesses = np.array(fitnesses)
         max_fitness_idx = np.argmax(fitnesses)
+        best_fitness_genome = population[max_fitness_idx]  # Elite for this gen
+
         if fitnesses[max_fitness_idx] > best_fitness:
             best_fitness = fitnesses[max_fitness_idx]
-            best_genome = population[max_fitness_idx]
+            best_genome = best_fitness_genome
 
-        # Estimate progress % for best genome
-        best_fitness_genome = population[max_fitness_idx]
-        _, lap_time, best_progress = simulate_function(best_fitness_genome, track, render=False, return_progress=True)
+        # Estimate progress for the best genome of this generation
+        _, _, best_progress = simulate_function(
+            best_fitness_genome, track, render=False, return_progress=True
+        )
         lap_percent = 100.0 * best_progress
-        print(f"Generation {gen + 1} Best Fitness: {best_fitness:.2f} | Lap Completion: {lap_percent:.1f}%")
+        print(f"Generation {gen + 1} Best Fitness: {fitnesses[max_fitness_idx]:.2f} | Lap Completion: {lap_percent:.1f}%")
 
-        population = evolve_population(population, fitnesses, num_parents, mutation_std)
+        # Evolve next generation with elitism
+        population = evolve_population(
+            population,
+            fitnesses,
+            num_parents,
+            mutation_std,
+            elite=best_fitness_genome
+        )
 
     return best_genome, best_fitness

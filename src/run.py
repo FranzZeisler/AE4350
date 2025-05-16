@@ -14,10 +14,10 @@ if __name__ == "__main__":
         simulate_function=simulate_track_neural,
         track=track,
         genome_length=genome_size,
-        pop_size=30,
+        pop_size=50,
         num_parents=10,
-        mutation_std=0.2,
-        generations=40,
+        mutation_std=0.3,
+        generations=100,
         render=False
     )
 
