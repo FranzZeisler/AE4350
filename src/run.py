@@ -14,11 +14,11 @@ if __name__ == "__main__":
         simulate_function=simulate_track_neural,
         track=track,
         genome_length=genome_size,
-        pop_size=20,
+        pop_size=30,
         num_parents=10,
-        mutation_std=0.1,
-        generations=20,
-        render=False,
+        mutation_std=0.2,
+        generations=40,
+        render=False
     )
 
     print("Best fitness found:", best_fitness)

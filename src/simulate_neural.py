@@ -12,63 +12,73 @@ def build_track_polygon(track):
     polygon_points = np.vstack((left_boundary, right_boundary))
     return Polygon(polygon_points)
 
-def compute_track_length(track):
-    x_c, y_c = track["x_c"], track["y_c"]
-    diffs = np.diff(np.stack((x_c, y_c), axis=1), axis=0)
-    distances = np.linalg.norm(diffs, axis=1)
-    return np.sum(distances)
+def compute_centerline_progress(track):
+    centerline = np.stack((track["x_c"], track["y_c"]), axis=1)
+    diffs = np.diff(centerline, axis=0)
+    segment_lengths = np.linalg.norm(diffs, axis=1)
+    cumulative_lengths = np.insert(np.cumsum(segment_lengths), 0, 0)
+    return centerline, cumulative_lengths
 
 def simulate_track_neural(genome, track, render=True):
     car = Car(x=track["x_c"][0], y=track["y_c"][0], heading=track["heading"][0])
-    path_points = np.stack((track["x_c"], track["y_c"]), axis=1)
     dt = car.dt
-    max_time = 500.0
+    max_time = 1500.0
     min_lap_time = 10.0
     lap_radius = 5.0
 
     track_polygon = build_track_polygon(track)
-    track_length = compute_track_length(track)
+    centerline, cumulative_lengths = compute_centerline_progress(track)
+    track_length = cumulative_lengths[-1]
 
-    positions = []
-    time_elapsed = 0.0
     nn = NeuralController(genome)
-
     fitness = 0.0
     off_track_penalty = 1000.0
+    lateral_penalty_coeff = 5
+    progress_reward_coeff = 100.0
+    lap_completion_bonus = 10000
 
-    distance_traveled = 0.0
-    last_pos = car.pos.copy()
+    last_progress = 0.0
+    positions = []
+    time_elapsed = 0.0
 
     while time_elapsed < max_time:
-        obs = extract_features(car, track, path_points)
+        obs = extract_features(car, track, centerline)
         steer, throttle = nn.forward(obs)
-        throttle = max(0.0, throttle)  # prevent backward motion
+        throttle = max(0.0, throttle)
         car.update(steer, throttle)
         positions.append(car.pos.copy())
         time_elapsed += dt
 
-        # Accumulate traveled distance
-        distance_traveled += np.linalg.norm(car.pos - last_pos)
-        last_pos = car.pos.copy()
-
-        # Check if car inside track polygon
+        # Off-track check
         car_point = Point(car.pos[0], car.pos[1])
         if not track_polygon.contains(car_point):
             fitness -= off_track_penalty
-            print("Car went off track!")
             break
 
-        # Reward for moving forward (speed * dt)
-        fitness += car.speed * dt
+        # Find nearest centerline point
+        distances = np.linalg.norm(centerline - car.pos, axis=1)
+        closest_idx = np.argmin(distances)
+
+        # Reward progress along centerline
+        current_progress = cumulative_lengths[closest_idx]
+        progress_delta = current_progress - last_progress
+        if progress_delta > 0:
+            fitness += progress_reward_coeff * progress_delta
+            last_progress = current_progress
+
+        # Penalize lateral deviation
+        center_pt = centerline[closest_idx]
+        lateral_error = np.linalg.norm(car.pos - center_pt)
+        fitness -= lateral_penalty_coeff * lateral_error
 
         # Lap complete?
-        dist_to_start = np.linalg.norm(car.pos - path_points[0])
+        dist_to_start = np.linalg.norm(car.pos - centerline[0])
         if (
             time_elapsed > min_lap_time
             and dist_to_start < lap_radius
-            and distance_traveled >= 0.95 * track_length
+            and current_progress >= 0.95 * track_length
         ):
-            fitness += 10000  # Big bonus for lap completion
+            fitness += lap_completion_bonus
             print(f"Lap completed in {time_elapsed:.2f} seconds.")
             break
 
@@ -77,6 +87,7 @@ def simulate_track_neural(genome, track, render=True):
         plt.figure(figsize=(10, 8))
         plt.plot(track["x_l"], track["y_l"], 'blue', label="Track boundaries")
         plt.plot(track["x_r"], track["y_r"], 'blue')
+        plt.plot(track["x_c"], track["y_c"], 'k--', label="Centerline", alpha=0.5)
         plt.plot(positions[:, 0], positions[:, 1], 'r-', label="Car trajectory")
         plt.axis("equal")
         plt.legend()
