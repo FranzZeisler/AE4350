@@ -13,7 +13,6 @@ def build_track_polygon(track):
     # Fix polygon if invalid
     if not poly.is_valid:
         poly = poly.buffer(0)
-        print("Warning: Track polygon was invalid and was fixed.")
 
     return poly
 
@@ -70,24 +69,9 @@ def simulate_track_pursuit(
         # Check track boundaries (include boundary as inside)
         car_point = Point(car.pos[0], car.pos[1])
         if not track_polygon.contains(car_point):
-            print("Car point is outside the track boundaries!")
-            print(f"Checking if point {car_point} is inside polygon: {track_polygon.contains(car_point)}")
+            #print("Car point is outside the track boundaries!")
             crash_point = car.pos.copy()
             time_elapsed = 999.0
-            # Plot crash point with boundary to check
-            plt.figure(figsize=(10, 8))
-            plt.plot(track["x_l"], track["y_l"], 'r-', label="Left boundary")
-            plt.plot(track["x_r"], track["y_r"], 'b-', label="Right boundary")
-
-            # Mark crash location if it happened
-            if crash_point is not None:
-                plt.plot(crash_point[0], crash_point[1], 'rx', markersize=14, label="Crash ❌")
-
-            plt.axis("equal")
-            plt.legend()
-            plt.title("Car following centerline with pure pursuit controller")
-            plt.show()
-
             break
 
         # Check for lap completion
@@ -103,10 +87,6 @@ def simulate_track_pursuit(
         plt.figure(figsize=(10, 8))
         plt.plot(track["x_l"], track["y_l"], 'r-', label="Left boundary")
         plt.plot(track["x_r"], track["y_r"], 'b-', label="Right boundary")
-
-        # Plot polygon boundary to debug
-        x_poly, y_poly = track_polygon.exterior.xy
-        plt.plot(x_poly, y_poly, 'g--', label="Track polygon boundary")
 
         # Plot trajectory colored by speed
         sc = plt.scatter(positions[:, 0], positions[:, 1], c=speeds, cmap='jet', s=5)

@@ -1,5 +1,5 @@
 import numpy as np
-#from pursuit_optimiser import optimize_params_grid
+from pursuit_optimiser import optimize_params_grid
 from simulate_neural import simulate_track_neural
 from simulate_pid import simulate_track_pid
 from simulate_pursuit import simulate_track_pursuit
@@ -42,6 +42,6 @@ if __name__ == "__main__":
     # simulate_track_pid(track)
 
     # Pure pursuit controller
-    #optimize_params_grid(track)
-    simulate_track_pursuit(track, plot_speed=True)
+    optimize_params_grid(track)
+    #simulate_track_pursuit(track, plot_speed=True)
 
