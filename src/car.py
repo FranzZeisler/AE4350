@@ -11,16 +11,17 @@ class Car:
         """
         self.pos = np.array([x, y], dtype=float)
         self.heading = heading  # radians
-        self.speed = 10.0        # m/s
-        self.velocity = np.array([0.0, 0.0])
-        self.wheelbase = 3.6     # meters
+        self.speed = 100.0        # m/s — updated from 10.0 to 30.0
+        self.velocity = np.array([self.speed * np.cos(heading), self.speed * np.sin(heading)])  # Set velocity consistent with speed & heading
+        self.wheelbase = 3.7     # meters
 
         self.max_accel = 15.0       # m/s²
         self.max_decel = 30.0       # m/s²
         self.max_lateral_g = 4.0 * 9.81
-        self.top_speed = 70.0       # m/s
-        self.max_steer_rate = np.deg2rad(2.0)  # radians per step
-        self.steering_angle = 0.0   # radians
+        self.top_speed = 100.0       # m/s
+        self.max_steer_rate = np.deg2rad(50) # radians per step
+        self.steering_angle = 0.0   # radians — already initialized straight
+
         self.dt = 0.1               # seconds
 
         self.last_lat_accel = 0.0
