@@ -18,9 +18,12 @@ class NeuralController:
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
 
+        # Initialize weights and biases from the genome
         self.weights1 = genome[0:input_dim*hidden_dim].reshape((input_dim, hidden_dim))
         self.bias1 = genome[input_dim*hidden_dim:input_dim*hidden_dim + hidden_dim]
 
+        # The second layer weights and biases
+        # The output layer has 2 outputs (steering and throttle)
         offset = input_dim * hidden_dim + hidden_dim
         self.weights2 = genome[offset:offset + hidden_dim*output_dim].reshape((hidden_dim, output_dim))
         self.bias2 = genome[offset + hidden_dim*output_dim:]
@@ -37,6 +40,6 @@ class NeuralController:
         :param inputs: Input features (flattened).
         :return: Steering and throttle outputs.
         """
-        x = self.relu(np.dot(inputs, self.weights1) + self.bias1)
+        x = self.relu(np.dot(inputs, self.weights1) + self.bias1) # ReLU → [0, ∞)
         x = np.tanh(np.dot(x, self.weights2) + self.bias2)  # tanh → [-1, 1]
         return x  # [steering, throttle]

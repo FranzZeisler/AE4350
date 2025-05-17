@@ -35,7 +35,7 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
     :param track: The track object containing the track data.
     :param render: Whether to render the simulation.
     :param return_progress: Whether to return the progress made.
-    :return: A tuple containing the fitness score and time elapsed.
+    :return: A tuple containing the fitness score, time elapsed.
     """
     car = Car(x=track["x_c"][0], y=track["y_c"][0], heading=track["heading"][0])
     dt = car.dt
@@ -51,13 +51,15 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
     off_track_penalty = 0.1
     lateral_penalty_coeff = 10.0
     progress_reward_coeff = 100.0
-    lap_completion_bonus = 2.0
+    lap_completion_bonus = 1000.0
 
     last_progress = 0.0
     positions = []
     time_elapsed = 0.0
 
     while time_elapsed < max_time:
+
+        #print(f"Time: {time_elapsed:.2f}s, Position: {car.pos}, Speed: {car.speed:.2f}, Heading: {car.heading:.2f}, Fitness: {fitness:.2f}")
         obs = car.get_feature_vector(track, centerline)
         steer, throttle = nn.forward(obs)
 
@@ -67,25 +69,32 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
 
         car_point = Point(car.pos[0], car.pos[1])
         if not track_polygon.contains(car_point):
-            fitness *= off_track_penalty
+            # Update fitness for going off track
+            fitness -= off_track_penalty
             break
 
+        # Calculate fitness based on progress and lateral error
+        # Find the closest point on the centerline to the car's position and compute progress
         distances = np.linalg.norm(centerline - car.pos, axis=1)
         closest_idx = np.argmin(distances)
-
         current_progress = cumulative_lengths[closest_idx]
         progress_delta = current_progress - last_progress
         if progress_delta > 0:
+            # Update fitness based on progress made
             fitness += progress_reward_coeff * progress_delta
             last_progress = current_progress
-                
+
+
+        # Calculate the fitness based on the lateral error       
         lateral_error = np.linalg.norm(car.pos - centerline[closest_idx])
+        # Update fitness based on lateral error
         fitness -= lateral_penalty_coeff * lateral_error
 
         # Early finish if lap complete
         if current_progress >= 0.99 * track_length:
-            fitness *= lap_completion_bonus
             print(f"Lap completed at time {time_elapsed:.2f}s with fitness {fitness:.2f}")
+            # Update fitness for completing the lap
+            fitness += lap_completion_bonus
             break
     
     if render:
@@ -104,6 +113,6 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
     # Return fitness and time elapsed
     # If return_progress is True, also return the progress made as a fraction of the track length
     if return_progress:
-        return fitness, time_elapsed, last_progress / track_length
+        return fitness, time_elapsed, current_progress / track_length
     else:
         return fitness, time_elapsed

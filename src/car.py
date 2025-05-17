@@ -33,30 +33,40 @@ class Car:
         :param target_steer: Target steering angle in radians.
         :param throttle: Throttle input, where 1.0 is full throttle and -1.0 is full brake.
         """
+
+        # Update steering angle with rate limit
         steer_diff = np.clip(target_steer - self.steering_angle, -self.max_steer_rate, self.max_steer_rate)
         self.steering_angle += steer_diff
 
+        # Update speed based on throttle input
+        # Positive throttle for acceleration, negative for deceleration
         if throttle >= 0:
             accel = throttle * self.max_accel
         else:
             accel = throttle * self.max_decel
 
+        # Apply acceleration to speed, ensuring it doesn't exceed top speed or go below zero
         self.speed += accel * self.dt
         self.speed = np.clip(self.speed, 0, self.top_speed)
 
+        # Calculate lateral acceleration and adjust speed if necessary
         turning_radius = self.wheelbase / (np.tan(self.steering_angle) + 1e-6)
         lat_accel = self.speed ** 2 / turning_radius
         if abs(lat_accel) > self.max_lateral_g:
             self.speed = np.sqrt(abs(self.max_lateral_g * turning_radius))
 
+        # Update position and heading based on speed and steering angle
+        # Calculate angular velocity and update heading 
         angular_velocity = self.speed / self.wheelbase * np.tan(self.steering_angle)
         self.heading += angular_velocity * self.dt
 
+        # Update position based on speed and heading
         dx = self.speed * np.cos(self.heading) * self.dt
         dy = self.speed * np.sin(self.heading) * self.dt
         self.velocity = np.array([dx, dy]) / self.dt
         self.pos += np.array([dx, dy])
 
+        # Store last values for feature extraction
         self.last_lat_accel = lat_accel
         self.last_centripetal = lat_accel
         self.last_vel_heading = self.velocity_heading()
@@ -68,6 +78,7 @@ class Car:
         """
         vel_angle = np.arctan2(self.velocity[1], self.velocity[0])
         angle_diff = vel_angle - self.heading
+        # Normalize the angle difference to be within [-pi, pi]
         return (angle_diff + np.pi) % (2 * np.pi) - np.pi
 
     def get_feature_vector(self, track, path_points):

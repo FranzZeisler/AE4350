@@ -44,9 +44,14 @@ def run_evolution(
     generations,
     render=False,
 ):
+    
+    # Initialize the population
+    # Each genome is a 1D array of weights and biases for the neural network
     population = initialize_population(pop_size, genome_length)
     best_fitness = -np.inf
     best_genome = None
+
+    fitness_history = []
 
     for gen in range(generations):
         fitnesses = []
@@ -68,6 +73,7 @@ def run_evolution(
         )
         lap_percent = 100.0 * best_progress
         print(f"Generation {gen + 1} Best Fitness: {fitnesses[max_fitness_idx]:.2f} | Lap Completion: {lap_percent:.1f}%")
+        fitness_history.append(fitnesses[max_fitness_idx])  # Append best fitness this generation
 
         # Evolve next generation with elitism
         population = evolve_population(
@@ -78,4 +84,4 @@ def run_evolution(
             elite=best_fitness_genome
         )
 
-    return best_genome, best_fitness
+    return best_genome, best_fitness, fitness_history
