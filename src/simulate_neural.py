@@ -3,16 +3,25 @@ import matplotlib.pyplot as plt
 from shapely.geometry import Point, Polygon
 from car import Car
 from neural_controller import NeuralController
-from features import extract_features
 from track import load_track
 
 def build_track_polygon(track):
+    """
+    Build a polygon representing the track boundaries.
+    :param track: The track object containing left and right boundaries.
+    :return: A Shapely Polygon object representing the track.
+    """
     left_boundary = np.stack((track["x_l"], track["y_l"]), axis=1)
     right_boundary = np.stack((track["x_r"], track["y_r"]), axis=1)[::-1]  # reversed to close polygon
     polygon_points = np.vstack((left_boundary, right_boundary))
     return Polygon(polygon_points)
 
 def compute_centerline_progress(track):
+    """
+    Compute the centerline and cumulative lengths of the track segments.
+    :param track: The track object containing centerline points.
+    :return: A tuple containing the centerline points and cumulative lengths.
+    """
     centerline = np.stack((track["x_c"], track["y_c"]), axis=1)
     diffs = np.diff(centerline, axis=0)
     segment_lengths = np.linalg.norm(diffs, axis=1)
@@ -20,6 +29,14 @@ def compute_centerline_progress(track):
     return centerline, cumulative_lengths
 
 def simulate_track_neural(genome, track, render=True, return_progress=False):
+    """
+    Simulate the car on the track using a neural network controller.
+    :param genome: The genome (weights and biases) of the neural network.
+    :param track: The track object containing the track data.
+    :param render: Whether to render the simulation.
+    :param return_progress: Whether to return the progress made.
+    :return: A tuple containing the fitness score and time elapsed.
+    """
     car = Car(x=track["x_c"][0], y=track["y_c"][0], heading=track["heading"][0])
     dt = car.dt
     max_time = 800.0
@@ -41,9 +58,8 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
     time_elapsed = 0.0
 
     while time_elapsed < max_time:
-        obs = extract_features(car, track, centerline)
+        obs = car.get_feature_vector(track, centerline)
         steer, throttle = nn.forward(obs)
-        throttle = max(0.0, throttle)  # no reverse
 
         car.update(steer, throttle)
         positions.append(car.pos.copy())
@@ -71,8 +87,9 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
             fitness *= lap_completion_bonus
             print(f"Lap completed at time {time_elapsed:.2f}s with fitness {fitness:.2f}")
             break
-
+    
     if render:
+        # Visualize the trajectory
         positions = np.array(positions)
         plt.figure(figsize=(10, 8))
         plt.plot(track["x_l"], track["y_l"], 'blue', label="Track boundaries")
@@ -84,6 +101,8 @@ def simulate_track_neural(genome, track, render=True, return_progress=False):
         plt.title("Neural Network Controller Trajectory")
         plt.show()
 
+    # Return fitness and time elapsed
+    # If return_progress is True, also return the progress made as a fraction of the track length
     if return_progress:
         return fitness, time_elapsed, last_progress / track_length
     else:

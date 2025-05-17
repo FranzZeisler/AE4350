@@ -1,6 +1,13 @@
 import numpy as np
 
 def compute_lidar(car, track, angles=np.deg2rad([-90, -45, -15, 0, 15, 45, 90])):
+    """
+    Compute Lidar-like readings based on the car's position and heading.
+    :param car: The car object with position and heading.
+    :param track: The track object containing the left and right boundaries.
+    :param angles: Angles in radians for the Lidar rays.
+    :return: Lidar readings as an array of distances.
+    """
     pos = car.pos
     heading = car.heading
     x_l, y_l = track["x_l"], track["y_l"]
@@ -20,6 +27,12 @@ def compute_lidar(car, track, angles=np.deg2rad([-90, -45, -15, 0, 15, 45, 90]))
     return np.array(lidar_readings)
 
 def heading_errors(car, track_points):
+    """
+    Compute the heading errors to the next and future points on the track.
+    :param car: The car object with position and heading.
+    :param track_points: The points on the raceline.
+    :return: Heading errors to the next and future points.
+    """
     pos = car.pos
     heading = car.heading
     closest_idx = np.argmin(np.linalg.norm(track_points - pos, axis=1))
@@ -34,6 +47,13 @@ def heading_errors(car, track_points):
     return np.array([heading_to(next_idx), heading_to(future_idx)])
 
 def curvature_features(track_points, current_idx, num=5):
+    """
+    Compute curvature features based on the track points.
+    :param track_points: The points on the raceline.
+    :param current_idx: The index of the current point.
+    :param num: The number of curvature features to compute.
+    :return: Curvature features as an array.
+    """
     curvs = []
     for i in range(num):
         idx1 = min(current_idx + i, len(track_points) - 2)
@@ -45,10 +65,23 @@ def curvature_features(track_points, current_idx, num=5):
     return np.array(curvs)
 
 def velocity_heading(car, track_heading):
+    """
+    Compute the velocity heading of the car relative to the track heading.
+    :param car: The car object with velocity.
+    :param track_heading: The heading of the track at the closest point.
+    :return: The relative velocity heading.
+    """
     # Use the Car's existing velocity_heading() method
     return (car.velocity_heading() - track_heading + np.pi) % (2 * np.pi) - np.pi
 
 def extract_features(car, track, path_points):
+    """
+    Extract features from the car's state and the track.
+    :param car: The car object.
+    :param track: The track object containing the left and right boundaries.
+    :param path_points: The points along the track centerline.
+    :return: A feature vector containing various information about the car and track.
+    """
     lidar = compute_lidar(car, track)
     head_errs = heading_errors(car, path_points)
 

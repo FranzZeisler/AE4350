@@ -6,7 +6,7 @@ from track import load_track
 from evolve import run_evolution
 
 if __name__ == "__main__":
-    track = load_track("Budapest")
+    track = load_track("SaoPaulo")
 
     # Neural controller
     genome_size = 674  # Example size
@@ -21,7 +21,9 @@ if __name__ == "__main__":
         render=False
     )
 
-    print("Best fitness found:", best_fitness)
+    # Print the best genome and fitness
+    print("Best fitness found:", best_fitness)4
+    print("Best genome found:", best_genome)
     # Visualize the best genome
     simulate_track_neural(best_genome, track, render=True)
 
