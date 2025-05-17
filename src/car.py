@@ -22,7 +22,7 @@ class Car:
         self.max_steer_rate = np.deg2rad(50) # radians per step
         self.steering_angle = 0.0   # radians — already initialized straight
 
-        self.dt = 0.1               # seconds
+        self.dt = 0.01               # seconds
 
         self.last_lat_accel = 0.0
         self.last_centripetal = 0.0

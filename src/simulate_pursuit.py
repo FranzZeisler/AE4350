@@ -24,16 +24,21 @@ def build_track_polygon(track):
 
     return poly
 
+# Default values after running the pursuit_optimiser.py script for 250 iterations, 
+# n_initial_points=50, and 14 training tracks
+# It gave an average lap time of 77.64s on the training tracks and managed to complete all laps.
+# It also completed all laps on the test tracks.
+
 def simulate_track_pursuit(
     track,
-    base_lookahead=3.0,
-    lookahead_gain=0.4,
-    alpha=0.5,
-    throttle_threshold_1=5.0,
-    throttle_threshold_2=20.0,
+    base_lookahead=6.8586,
+    lookahead_gain=0.1362,
+    alpha=0.4005,
+    throttle_threshold_1=15.0,
+    throttle_threshold_2=10.0,
     throttle_1=1.0,
-    throttle_2=0.7,
-    throttle_3=0.3,
+    throttle_2=0.5171,
+    throttle_3=0.6,
     plot_speed=False
 ):
     car = Car(x=track["x_c"][0], y=track["y_c"][0], heading=track["heading"][0])
@@ -86,6 +91,7 @@ def simulate_track_pursuit(
         if time_elapsed > min_lap_time:
             dist_to_start = np.linalg.norm(car.pos - path_points[0])
             if dist_to_start < lap_radius:
+                print("Lap completed! in {:.2f}s".format(time_elapsed))
                 break
 
     if plot_speed:
