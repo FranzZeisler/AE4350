@@ -1,18 +1,26 @@
 from matplotlib import pyplot as plt
 import numpy as np
+from shapely import LinearRing
 from shapely.geometry import Point, Polygon
 from car import Car
 from pursuit_controller import pure_pursuit_control
 
 def build_track_polygon(track):
-    left_boundary = np.stack((track["x_l"], track["y_l"]), axis=1)
-    right_boundary = np.stack((track["x_r"], track["y_r"]), axis=1)[::-1]  # reverse to close loop
-    polygon_points = np.vstack((left_boundary, right_boundary, left_boundary[0:1]))  # explicitly close polygon
+    left_boundary = np.column_stack((track["x_l"], track["y_l"]))
+    right_boundary = np.column_stack((track["x_r"], track["y_r"]))[::-1]  # reversed
+
+    # Use LinearRing to ensure closed, simple rings
+    left_ring = LinearRing(left_boundary)
+    right_ring = LinearRing(right_boundary)
+
+    # Construct polygon from left + right rings
+    polygon_points = np.vstack((left_ring.coords, right_ring.coords))
     poly = Polygon(polygon_points)
 
     # Fix polygon if invalid
     if not poly.is_valid:
         poly = poly.buffer(0)
+        #print("Warning: Track polygon was invalid and was fixed.")
 
     return poly
 

@@ -80,8 +80,11 @@ def objective(**params):
 result = gp_minimize(
     objective,
     space,
-    n_calls=50,
-    n_initial_points=30,
+    n_calls=250,
+    n_initial_points=50,
+    acq_func='EI',
+    acq_optimizer='auto',
+    initial_point_generator='lhs',
     random_state=42,
     verbose=True
 )
