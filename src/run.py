@@ -22,7 +22,7 @@ if __name__ == "__main__":
     )
 
     # Print the best genome and fitness
-    print("Best fitness found:", best_fitness)4
+    print("Best fitness found:", best_fitness)
     print("Best genome found:", best_genome)
     # Visualize the best genome
     simulate_track_neural(best_genome, track, render=True)
