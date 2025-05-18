@@ -1,5 +1,7 @@
 import numpy as np
+from stable_baselines3 import PPO
 #from pursuit_optimiser import optimize_params_grid
+from rl_agent import CarEnv
 from simulate_neural import simulate_track_neural
 from simulate_pid import simulate_track_pid
 from simulate_pursuit import simulate_track_pursuit
@@ -43,5 +45,25 @@ if __name__ == "__main__":
 
     # Pure pursuit controller
     # optimize_params_grid(track)
-    simulate_track_pursuit(track, plot_speed=True)
+    #simulate_track_pursuit(track, plot_speed=True)
 
+    env = CarEnv(track)
+
+    # Create PPO model with your env
+    model = PPO("MlpPolicy", env, verbose=1)
+
+    # Train for 1000 timesteps (adjust as needed)
+    model.learn(total_timesteps=10000)
+
+    # Save the model
+    model.save("ppo_car_model")
+
+    # Test the trained model
+    obs = env.reset()
+    done = False
+    while not done:
+        action = env.action_space.sample()  # or your agent's action
+        obs, reward, done, info = env.step(action)
+
+    print(f"Episode done. Rendering...")
+    env.render()

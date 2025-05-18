@@ -77,10 +77,7 @@ class Car:
         Calculate the heading of the car based on its velocity vector.
         :return: The heading of the car in radians.
         """
-        vel_angle = np.arctan2(self.velocity[1], self.velocity[0])
-        angle_diff = vel_angle - self.heading
-        # Normalize the angle difference to be within [-pi, pi]
-        return (angle_diff + np.pi) % (2 * np.pi) - np.pi
+        return np.arctan2(self.velocity[1], self.velocity[0])
 
     def get_feature_vector(self, track, path_points):
         """

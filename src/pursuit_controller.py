@@ -25,14 +25,3 @@ def pure_pursuit_control(car_pos, car_heading, path_points, lookahead_distance=5
     steering_angle = (steering_angle + np.pi) % (2 * np.pi) - np.pi
 
     return steering_angle, lookahead_idx
-
-def compute_local_curvature(path_points, idx, window=5):
-    """
-    Compute approximate curvature by measuring heading change over a window.
-    """
-    i0 = max(idx - window, 0)
-    i1 = min(idx + window, len(path_points) - 1)
-    p0, p1 = path_points[i0], path_points[i1]
-    dx, dy = p1 - p0
-    heading = np.arctan2(dy, dx)
-    return heading
