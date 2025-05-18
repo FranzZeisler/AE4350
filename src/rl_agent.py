@@ -4,7 +4,7 @@ import gym
 from shapely.geometry import Point
 from car import Car
 from pursuit_controller import pure_pursuit_control
-from features import extract_features  # adjust if needed
+from features import extract_features  # adjust import as needed
 
 class CarEnv(gym.Env):
     def __init__(self, track):
@@ -13,11 +13,8 @@ class CarEnv(gym.Env):
         self.path_points = np.stack((track["x_c"], track["y_c"]), axis=1)
         self.track_polygon = self._build_track_polygon(track)
 
-        # Action space: continuous steering (-1 to 1) and throttle (0 to 1)
-        # You can normalize later as needed
         self.action_space = gym.spaces.Box(low=np.array([-1, 0]), high=np.array([1, 1]), dtype=np.float32)
 
-        # Observation space: shape matches your feature vector length
         dummy_car = Car(track["x_c"][0], track["y_c"][0], track["heading"][0])
         dummy_features = extract_features(dummy_car, track, self.path_points)
         obs_len = len(dummy_features)
@@ -48,7 +45,6 @@ class CarEnv(gym.Env):
         self.time_elapsed = 0.0
         self.done = False
 
-        # For rendering
         self.positions = [self.car.pos.copy()]
         self.speeds = [self.car.speed]
         self.crash_point = None
@@ -67,7 +63,6 @@ class CarEnv(gym.Env):
         self.car.update(steering_angle, throttle)
         self.time_elapsed += self.car.dt
 
-        # Store positions and speeds for rendering
         self.positions.append(self.car.pos.copy())
         self.speeds.append(self.car.speed)
 
@@ -92,9 +87,28 @@ class CarEnv(gym.Env):
             obs = extract_features(self.car, self.track, self.path_points)
             return obs, reward, self.done, {"timeout": True}
 
+        # Calculate closest path point and heading error
         closest_idx = np.argmin(np.linalg.norm(self.path_points - self.car.pos, axis=1))
-        progress = closest_idx / len(self.path_points)
-        reward = progress * 10.0 + self.car.speed * 0.1
+        next_idx = (closest_idx + 1) % len(self.path_points)
+        path_direction = np.arctan2(
+            self.path_points[next_idx][1] - self.car.pos[1],
+            self.path_points[next_idx][0] - self.car.pos[0]
+        )
+        heading_error = abs((path_direction - self.car.heading + np.pi) % (2 * np.pi) - np.pi)
+
+        # Progress reward (scaled 0 to 10)
+        progress_reward = (closest_idx / len(self.path_points)) * 10.0
+
+        # Speed reward gated by heading error
+        if heading_error < np.deg2rad(15):
+            speed_reward = self.car.speed
+        elif heading_error < np.deg2rad(30):
+            speed_reward = 0.5 * self.car.speed
+        else:
+            speed_reward = 0.0
+
+        # Total reward
+        reward = progress_reward + speed_reward * 5.0
 
         obs = extract_features(self.car, self.track, self.path_points)
         return obs, reward, self.done, {}
