@@ -4,45 +4,36 @@ import numpy as np
 from shapely.geometry import Point
 from car import Car
 from track import load_track, build_track_polygon
-from pursuit_controller import pure_pursuit_control
 from visualisation import plot_track_and_trajectory  # your helper
 
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name):
+    def __init__(self, track_name, dt=0.01):  # Allow dt to be passed in
         super().__init__()
+        self.dt = dt
+        
         self.track   = load_track(track_name)
         self.path    = np.stack((self.track["x_c"], self.track["y_c"]), axis=1)
         self.polygon = build_track_polygon(self.track)
-        self.dt      = Car(0,0,0).dt
-        
-        # action & observation spaces
+
+        # Action/Observation spaces
         self.action_space      = spaces.Box(-1.0, 1.0, shape=(2,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32)
         
-        # expert parameters
-        self.base_lookahead       = 6.8586
-        self.lookahead_gain       = 0.1362
-        self.alpha                = 0.4005
-        self.throttle_threshold_1 = 15.0
-        self.throttle_threshold_2 = 10.0
-        self.throttle_1 = 1.0
-        self.throttle_2 = 0.5171
-        self.throttle_3 = 0.6
-        
-        self.max_time   = 500.0
+        self.max_time = 300.0
         self.lap_radius = 5.0
 
-        # for rendering
-        self.positions   = []
-        self.speeds      = []
+        # Rendering
+        self.positions = []
+        self.speeds = []
         self.crash_point = None
+
         
     def reset(self):
         x0, y0 = self.track["x_c"][0], self.track["y_c"][0]
         hdg0    = self.track["heading"][0]
-        self.car = Car(x0, y0, hdg0)
+        self.car = Car(x0, y0, hdg0, dt=self.dt)
         self.time = 0.0
 
         # reset the render buffers by re-assigning, not slicing
