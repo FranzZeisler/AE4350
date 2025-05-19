@@ -40,7 +40,7 @@ def simulate_track_pursuit(
         lookahead_distance = base_lookahead + lookahead_gain * car.speed
 
         # Pure pursuit control gives steering and throttle
-        steer, heading_error, lookahead_idx = pure_pursuit_control(
+        steer, heading_error = pure_pursuit_control(
             car.pos, car.heading, path_points, lookahead_distance
         )
 
@@ -74,7 +74,7 @@ def simulate_track_pursuit(
         if time_elapsed > min_lap_time:
             dist_to_start = np.linalg.norm(car.pos - path_points[0])
             if dist_to_start < lap_radius:
-                print("Lap completed! in {:.2f}s".format(time_elapsed))
+                #print("Lap completed! in {:.2f}s".format(time_elapsed))
                 break
 
     # If plot_speed is True, plot the track and trajectory

@@ -23,7 +23,7 @@ def pure_pursuit_control(car_pos, car_heading, path_points, lookahead_distance=5
 
     heading_error = abs(steering_angle)
 
-    return steering_angle, heading_error, lookahead_idx
+    return steering_angle, heading_error
 
 def compute_throttle(heading_error, throttle_threshold_1, throttle_threshold_2, throttle_1, throttle_2, throttle_3):
     if heading_error < np.deg2rad(throttle_threshold_1):
