@@ -1,6 +1,17 @@
 import numpy as np
 
 def pure_pursuit_control(car_pos, car_heading, path_points, lookahead_distance=5.0):
+    """
+    Pure Pursuit Control Algorithm for steering angle calculation.
+    Args:
+        car_pos (np.ndarray): Current position of the car (x, y).
+        car_heading (float): Current heading of the car in radians.
+        path_points (np.ndarray): Array of points representing the path (N, 2).
+        lookahead_distance (float): Lookahead distance for the pure pursuit algorithm.
+    Returns:
+        steering_angle (float): Steering angle in radians.
+        heading_error (float): Heading error in radians.
+    """
     dists = np.linalg.norm(path_points - car_pos, axis=1)
     closest_idx = np.argmin(dists)
 
@@ -26,6 +37,18 @@ def pure_pursuit_control(car_pos, car_heading, path_points, lookahead_distance=5
     return steering_angle, heading_error
 
 def compute_throttle(heading_error, throttle_threshold_1, throttle_threshold_2, throttle_1, throttle_2, throttle_3):
+    """
+    Compute the throttle based on the heading error.
+    Args:
+        heading_error (float): Heading error in radians.
+        throttle_threshold_1 (float): First throttle threshold in degrees.
+        throttle_threshold_2 (float): Second throttle threshold in degrees.
+        throttle_1 (float): Throttle value for the first range.
+        throttle_2 (float): Throttle value for the second range.
+        throttle_3 (float): Throttle value for the third range.
+    Returns:
+        float: Throttle value based on the heading error.
+    """
     if heading_error < np.deg2rad(throttle_threshold_1):
         return throttle_1
     elif heading_error < np.deg2rad(throttle_threshold_2):
@@ -34,4 +57,13 @@ def compute_throttle(heading_error, throttle_threshold_1, throttle_threshold_2, 
         return throttle_3
 
 def smooth_steering(new_steer, current_steer, alpha):
+    """
+    Smooth the steering input to avoid abrupt changes.
+    Args:
+        new_steer (float): New steering angle.
+        current_steer (float): Current steering angle.
+        alpha (float): Smoothing factor (0 < alpha < 1).
+    Returns:
+        float: Smoothed steering angle.
+    """
     return alpha * new_steer + (1 - alpha) * current_steer

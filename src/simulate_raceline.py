@@ -6,6 +6,11 @@ from scipy.interpolate import splprep, splev
 
 
 def compute_curvature(path):
+    """
+    Compute the curvature of a path using finite differences.
+    :param path: Nx2 array of (x, y) points
+    :return: Nx1 array of curvature values
+    """
     dx = np.gradient(path[:, 0])
     dy = np.gradient(path[:, 1])
     ddx = np.gradient(dx)
@@ -30,39 +35,48 @@ def resample_path(path, spacing=0.5):
     return np.vstack((x_fine, y_fine)).T
 
 def simulate_raceline(track, plot_speed=False):
+    """
+    Simulate the raceline on a track and return the total time taken.
+    :param track: Track data containing x_c, y_c, and raceline.
+    :param plot_speed: Whether to plot the track and trajectory.
+    :return: Total time taken to complete the raceline.
+    """
+    
+    # Check if the track has a raceline
     if track["raceline"] is None:
         raise ValueError("Track has no raceline!")
 
+    # Resample the raceline to have uniform spacing
     raceline = track["raceline"]
     raceline = resample_path(raceline, spacing=0.5)
-    polygon = build_track_polygon(track)
 
     # Use Car class to access vehicle limits
-    dummy_car = Car(0, 0, 0)
-    max_lateral_accel = dummy_car.max_lateral_accel
-    max_speed = dummy_car.max_speed
+    car = Car(x=track["x_c"][0], y=track["y_c"][0], heading=track["heading"][0])
+    max_lateral_accel = car.max_lateral_accel
+    max_speed = car.max_speed
 
     # Precompute speed at each raceline point
     curvature = compute_curvature(raceline)
     with np.errstate(divide='ignore'):
-        max_speeds = np.sqrt(np.where(curvature > 1e-6,
-                                      max_lateral_accel / curvature,
-                                      max_speed))
+        max_speeds = np.sqrt(np.where(curvature > 1e-6, max_lateral_accel / curvature, max_speed))
     max_speeds = np.clip(max_speeds - 2.0, 0.0, max_speed)
 
+    # Resample the raceline to have uniform spacing
     positions = []
     speeds = []
     total_time = 0.0
 
+    # Simulate the raceline
+    # Loop through each segment of the raceline
     for i in range(len(raceline) - 1):
         p0 = raceline[i]
         p1 = raceline[i + 1]
 
+        # Calculate the distance and heading for this segment.
         segment = p1 - p0
         distance = np.linalg.norm(segment)
         if distance < 1e-6:
             continue
-
         heading = np.arctan2(segment[1], segment[0])
         speed = max_speeds[i]
         dt = distance / speed
@@ -73,7 +87,7 @@ def simulate_raceline(track, plot_speed=False):
         speeds.append(speed)
         total_time += dt
 
-
+    # If plot_speed is True, plot the track and trajectory
     if plot_speed:
         plot_track_and_trajectory(track, positions, speeds=speeds)
 

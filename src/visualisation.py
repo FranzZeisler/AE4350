@@ -2,6 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def plot_track_and_trajectory(track, positions, speeds=None, crash_point=None):
+    """
+    Plot track boundaries and car trajectory.
+    :param track: track dict from load_track
+    :param positions: array of shape (N,2) containing x,y positions
+    :param speeds: optional array of shape (N,) containing speed at each position
+    :param crash_point: optional (x,y) tuple for crash point
+    """
     plt.figure(figsize=(10, 8))
 
     # Close left boundary by adding first point at end
@@ -14,6 +21,7 @@ def plot_track_and_trajectory(track, positions, speeds=None, crash_point=None):
     y_r_closed = np.append(track["y_r"], track["y_r"][0])
     plt.plot(x_r_closed, y_r_closed, 'r-')
 
+    # Plot the trajectory
     positions = np.array(positions)
     if speeds is not None:
         sc = plt.scatter(positions[:, 0], positions[:, 1], c=speeds, cmap='jet', s=5)
@@ -22,6 +30,7 @@ def plot_track_and_trajectory(track, positions, speeds=None, crash_point=None):
     else:
         plt.plot(positions[:, 0], positions[:, 1], 'k-', label="Trajectory")
 
+    # Plot crash point if provided
     if crash_point is not None:
         plt.plot(crash_point[0], crash_point[1], 'rx', markersize=14, label="Crash ❌")
 

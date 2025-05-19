@@ -5,6 +5,13 @@ from features import extract_features
 
 class Car:
     def __init__(self, x, y, heading, dt=0.01):
+        """
+        Initialize the car with position, heading, and other parameters.
+        :param x: Initial x position (meters)
+        :param y: Initial y position (meters)
+        :param heading: Initial heading (radians)
+        :param dt: Time step for the simulation (seconds)
+        """
         self.pos = np.array([x, y], dtype=float)
         self.heading = heading        # radians
         self.speed = 0.0              # m/s
@@ -21,6 +28,11 @@ class Car:
         self.dt = dt
 
     def update(self, steer, throttle):
+        """
+        Update the car's position and speed based on steering and throttle inputs.
+        :param steer: Steering input (-1 to 1)
+        :param throttle: Throttle input (-1 to 1)
+        """
         # Clamp inputs
         steer = np.clip(steer, -self.max_steering_angle, self.max_steering_angle)
         throttle = np.clip(throttle, -1, 1)
@@ -48,4 +60,10 @@ class Car:
         self.pos += np.array([dx, dy])
 
     def get_feature_vector(self, track, path_points):
+        """
+        Extract features from the car's state and the track.
+        :param track: The track data.
+        :param path_points: The path points for the track.
+        :return: Feature vector.
+        """
         return extract_features(self, track, path_points)
