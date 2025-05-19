@@ -1,16 +1,10 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from shapely import LinearRing
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 from car import Car
-from pursuit_controller import pure_pursuit_control
+from pursuit_controller import pure_pursuit_control, compute_throttle, smooth_steering
 from track import build_track_polygon
 from visualisation import plot_track_and_trajectory
-
-# Default values after running the pursuit_optimiser.py script for 250 iterations, 
-# n_initial_points=50, and 14 training tracks
-# It gave an average lap time of 77.64s on the training tracks and managed to complete all laps.
-# It also completed all laps on the test tracks.
 
 def simulate_track_pursuit(
     track,
@@ -24,8 +18,11 @@ def simulate_track_pursuit(
     throttle_3=0.6,
     plot_speed=False
 ):
+    # Initialize car at the start of the centerline
     car = Car(x=track["x_c"][0], y=track["y_c"][0], heading=track["heading"][0])
+    # Path points for pure pursuit
     path_points = np.stack((track["x_c"], track["y_c"]), axis=1)
+    # Build track polygon for collision detection
     track_polygon = build_track_polygon(track)
 
     dt = car.dt
@@ -38,36 +35,39 @@ def simulate_track_pursuit(
     time_elapsed = 0.0
     crash_point = None
 
-    car.max_steer_rate = np.deg2rad(50)
-
     while time_elapsed < max_time:
+        # Calculate the lookahead distance based on speed
         lookahead_distance = base_lookahead + lookahead_gain * car.speed
-        steer, lookahead_idx = pure_pursuit_control(car.pos, car.heading, path_points, lookahead_distance)
 
-        vector_to_target = path_points[lookahead_idx] - car.pos
-        angle_to_target = np.arctan2(vector_to_target[1], vector_to_target[0])
-        heading_error = abs((angle_to_target - car.heading + np.pi) % (2 * np.pi) - np.pi)
+        # Pure pursuit control gives steering and throttle
+        steer, heading_error, lookahead_idx = pure_pursuit_control(
+            car.pos, car.heading, path_points, lookahead_distance
+        )
 
-        if heading_error < np.deg2rad(throttle_threshold_1):
-            throttle = throttle_1
-        elif heading_error < np.deg2rad(throttle_threshold_2):
-            throttle = throttle_2
-        else:
-            throttle = throttle_3
+        # Calculate throttle based on heading error
+        throttle = compute_throttle(
+            heading_error,
+            throttle_threshold_1,
+            throttle_threshold_2,
+            throttle_1,
+            throttle_2,
+            throttle_3
+        )
 
-        steer = alpha * steer + (1 - alpha) * car.steering_angle
+        # Smooth the steering input
+        steer = smooth_steering(steer, car.steering_angle, alpha)
 
+        # Update car state
         car.update(steer, throttle)
         positions.append(car.pos.copy())
         speeds.append(car.speed)
         time_elapsed += dt
 
-        # Check track boundaries (include boundary as inside)
+        # Crash check: is the car within track boundaries?
         car_point = Point(car.pos[0], car.pos[1])
         if not track_polygon.contains(car_point):
-            #print("Car point is outside the track boundaries!")
             crash_point = car.pos.copy()
-            time_elapsed = 999.0
+            time_elapsed = 999.0  # Penalty for crash
             break
 
         # Check for lap completion
@@ -77,7 +77,9 @@ def simulate_track_pursuit(
                 print("Lap completed! in {:.2f}s".format(time_elapsed))
                 break
 
+    # If plot_speed is True, plot the track and trajectory
     if plot_speed:
         plot_track_and_trajectory(track, positions, speeds=speeds, crash_point=crash_point)
 
+    # Return the time elapsed
     return time_elapsed
