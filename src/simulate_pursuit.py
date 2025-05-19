@@ -4,25 +4,8 @@ from shapely import LinearRing
 from shapely.geometry import Point, Polygon
 from car import Car
 from pursuit_controller import pure_pursuit_control
-
-def build_track_polygon(track):
-    left_boundary = np.column_stack((track["x_l"], track["y_l"]))
-    right_boundary = np.column_stack((track["x_r"], track["y_r"]))[::-1]  # reversed
-
-    # Use LinearRing to ensure closed, simple rings
-    left_ring = LinearRing(left_boundary)
-    right_ring = LinearRing(right_boundary)
-
-    # Construct polygon from left + right rings
-    polygon_points = np.vstack((left_ring.coords, right_ring.coords))
-    poly = Polygon(polygon_points)
-
-    # Fix polygon if invalid
-    if not poly.is_valid:
-        poly = poly.buffer(0)
-        #print("Warning: Track polygon was invalid and was fixed.")
-
-    return poly
+from track import build_track_polygon
+from visualisation import plot_track_and_trajectory
 
 # Default values after running the pursuit_optimiser.py script for 250 iterations, 
 # n_initial_points=50, and 14 training tracks
@@ -95,25 +78,6 @@ def simulate_track_pursuit(
                 break
 
     if plot_speed:
-        positions = np.array(positions)
-        speeds = np.array(speeds)
-
-        plt.figure(figsize=(10, 8))
-        plt.plot(track["x_l"], track["y_l"], 'r-', label="Left boundary")
-        plt.plot(track["x_r"], track["y_r"], 'b-', label="Right boundary")
-
-        # Plot trajectory colored by speed
-        sc = plt.scatter(positions[:, 0], positions[:, 1], c=speeds, cmap='jet', s=5)
-        cbar = plt.colorbar(sc)
-        cbar.set_label("Speed (m/s)")
-
-        # Mark crash location if it happened
-        if crash_point is not None:
-            plt.plot(crash_point[0], crash_point[1], 'rx', markersize=14, label="Crash ❌")
-
-        plt.axis("equal")
-        plt.legend()
-        plt.title("Car following centerline with pure pursuit controller")
-        plt.show()
+        plot_track_and_trajectory(track, positions, speeds=speeds, crash_point=crash_point)
 
     return time_elapsed
