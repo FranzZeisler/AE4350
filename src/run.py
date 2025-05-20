@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     # # Train
     # model = PPO("MlpPolicy", env, verbose=1)
-    # model.learn(total_timesteps=75000)
+    # model.learn(total_timesteps=50000)
     # model.save("ppo_racing_austin")
 
     # # Test
@@ -31,9 +31,6 @@ if __name__ == "__main__":
     # print(info)
         
     track = load_track("Austin")
-    # time_raceline = simulate_raceline(track, plot_speed=True)
-    # print("Ideal lap time on raceline: {:.2f} seconds".format(time_raceline))
-
-    # # Simulate pursuit
+    # Simulate pursuit
     time_pursuit = simulate_track_pursuit(track, plot_speed=True)
     print("Lap time on pursuit: {:.2f} seconds".format(time_pursuit))

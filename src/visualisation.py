@@ -44,7 +44,7 @@ def plot_track_and_trajectory(track, positions, speeds=None, crash_point=None, p
 
     # Plot crash point
     if crash_point is not None:
-        plt.plot(crash_point[0], crash_point[1], 'rx', markersize=14, label="Crash ❌")
+        plt.plot(crash_point[0], crash_point[1], 'rx', markersize=14, label="Crash")
 
     plt.axis("equal")
     plt.legend()

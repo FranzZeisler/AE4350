@@ -1,21 +1,33 @@
 import gym
 from gym import spaces
 import numpy as np
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 from car import Car
 from track import load_track, build_track_polygon
 from visualisation import plot_track_and_trajectory  # your helper
 
+# === Tunable global parameters ===
+
+MAX_TIME = 300.0       # Max episode duration (seconds)
+LAP_RADIUS = 5.0       # Radius to detect lap completion (meters)
+MIN_LAP_TIME = 10.0    # Minimum time before lap can be considered complete (seconds)
+
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt=0.01):
+    def __init__(self, track_name, dt, crash_penalty, lap_complete_reward, progress_reward_scale, acceleration_reward, steering_penalty, speed_reward):
         '''
         Initialize the Racing Environment.
         Args:
             track_name (str): The name of the track to load.
             dt (float): Time step for the simulation.
-        ''' 
+            progress_reward_scale (float): Scale for progress reward.
+            forward_vel_reward_scale (float): Scale for forward velocity reward.
+            lateral_penalty_scale (float): Scale for lateral penalty.
+            crash_penalty (float): Penalty for crashing.
+            lap_complete_reward (float): Reward for completing a lap.
+            steering_smoothness_penalty_scale (float): Scale for steering smoothness penalty.
+        '''
         super().__init__()
         self.dt = dt
         self.track   = load_track(track_name)
@@ -30,19 +42,42 @@ class RacingEnv(gym.Env):
 
         # Action/Observation spaces
         self.action_space      = spaces.Box(-1.0, 1.0, shape=(2,), dtype=np.float32)  # steer, throttle
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32)  # updated feature vector length
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32)  # feature vector length
 
         # Track completion parameters
-        self.max_time = 300.0  # seconds
-        self.lap_radius = 5.0  # meters
+        self.max_time = MAX_TIME
+        self.lap_radius = LAP_RADIUS
+        self.min_lap_time = MIN_LAP_TIME
 
         # Car progress tracking
         self.prev_progress = 0.0  # float progress fraction
+        self.prev_steering_angle = 0.0
 
         # Variables for Rendering
         self.positions = []
         self.speeds = []
         self.crash_point = None
+
+        # Set the parameters for rewards
+        self.crash_penalty = crash_penalty
+        self.lap_complete_reward = lap_complete_reward
+        self.progress_reward_scale = progress_reward_scale
+        self.acceleration_reward = acceleration_reward
+        self.steering_penalty = steering_penalty
+        self.speed_reward = speed_reward
+
+        # Define finish line as a small line segment perpendicular to track start direction
+        start_point = self.path[0]
+        direction_vector = self.path[1] - self.path[0]
+        perp_vector = np.array([-direction_vector[1], direction_vector[0]])
+        perp_vector = perp_vector / np.linalg.norm(perp_vector)  # normalize
+
+        line_length = 5.0  # length of finish line segment (meters)
+        p1 = start_point + perp_vector * (line_length / 2)
+        p2 = start_point - perp_vector * (line_length / 2)
+        self.finish_line = LineString([p1, p2])
+
+        self.crossed_finish_line = False  # Flag to detect crossing only once per lap
 
     def reset(self):
         '''
@@ -55,12 +90,15 @@ class RacingEnv(gym.Env):
         hdg0    = self.track["heading"][0]
         self.car = Car(x0, y0, hdg0, dt=self.dt)
         self.time = 0.0
-        self.prev_progress = 0.0  # reset progress
+        self.prev_progress = 0.0
+        self.prev_steering_angle = self.car.steering_angle
 
-        # Reset the render buffers by re-assigning, not slicing
+        # Reset the render buffers
         self.positions = [self.car.pos.copy()]
         self.speeds    = [self.car.speed]
         self.crash_point = None
+
+        self.crossed_finish_line = False  # Reset finish line crossing flag on reset
 
         # Return the initial observation
         return self.car.get_feature_vector(self.track)
@@ -76,65 +114,69 @@ class RacingEnv(gym.Env):
             done (bool): Whether the episode has ended.
             info (dict): Additional information about the environment.
         '''
-        # 1) Scale agent action to real controls
-        steer_agent    = action[0]
-        throttle_agent = action[1]
+        steer_agent, throttle_agent = action
 
-        # 2) Update car dynamics
+        # Update car dynamics
         self.car.update(steer_agent, throttle_agent)
         self.time += self.dt
 
-        # 3) Record for rendering
+        # Record for rendering
         self.positions.append(self.car.pos.copy())
         self.speeds.append(self.car.speed)
 
-        # 4) Get observation (feature vector)
+        # Get observation (feature vector)
         features = self.car.get_feature_vector(self.track)
-        
-        # 5) Check termination conditions
+
+        # Check termination conditions
         done = False
         info = {}
+
         if not self.polygon.contains(Point(*self.car.pos)):
             done = True
-            fitness = -20.0  # light crash penalty
-            self.crash_point = self.car.pos.copy()
             info["termination"] = "crash"
-        elif self.time > 10.0 and np.linalg.norm(self.car.pos - self.path[0]) < self.lap_radius:
+            self.crash_point = self.car.pos.copy()
+        elif self.check_lap_complete():
             done = True
-            fitness = +100.0
             info["termination"] = "lap_complete"
             info["lap_time"] = self.time
         elif self.time >= self.max_time:
             done = True
-            fitness = 0.0
             info["termination"] = "timeout"
-        else:
-            # 6) Update fitness score
-            fitness = self.update_fitness(action)
 
-        # 7) Return obs, reward, done, info
-        return features, fitness, done, info
-    
-    def update_fitness(self, action):
-        '''
-        Update the fitness score based on the car's performance.
-        Args:
-            action (np.ndarray): The action taken by the agent.
-        Returns:
-            fitness (float): The updated fitness score.
-        '''
-        # Progress reward
+        # Calculate reward
+        reward = self.update_fitness(action, done, info)
+
+        # Save previous steering angle for smoothness penalty next step
+        self.prev_steering_angle = self.car.steering_angle
+
+        return features, reward, done, info
+
+    def update_fitness(self, action, done=False, info=None):
+        if info is None:
+            info = {}
+
+        # Terminal rewards
+        if done:
+            if info.get("termination") == "crash":
+                return self.crash_penalty
+            elif info.get("termination") == "lap_complete":
+                return self.lap_complete_reward
+            
         progress_delta = self.compute_progress()
-        progress_bonus = progress_delta * 20.0  # tune scaling factor
+        progress_bonus = progress_delta * self.progress_reward_scale
 
-        # Throttle reward
-        accel_bonus = +1.5 * action[1]
+        accel_bonus = self.acceleration_reward * action[1]
 
-        # Speed reward
+        steer_penalty = self.steering_penalty * (action[0] ** 2)  # quadratic penalty for steering
+
         speed_norm = self.car.speed / self.car.max_speed
-        speed_bonus = +0.1 * speed_norm
+        speed_bonus = self.speed_reward * speed_norm
 
-        return progress_bonus + accel_bonus + speed_bonus 
+
+        total_reward = progress_bonus + accel_bonus + speed_bonus + steer_penalty
+
+        return total_reward
+
 
     def compute_progress(self):
         """
@@ -142,21 +184,43 @@ class RacingEnv(gym.Env):
         Returns:
             progress_delta (float): Progress since last step as fraction of total track length.
         """
-        # Find closest point on path
         dists = np.linalg.norm(self.path - self.car.pos, axis=1)
         idx = np.argmin(dists)
-        
-        # Get cumulative length at closest point
+
         current_length = self.cumulative_lengths[idx]
         current_progress = current_length / self.total_length
         
         prev_progress = self.prev_progress
-        
         self.prev_progress = current_progress
         
         return current_progress - prev_progress
 
-    def render(self):
+    def check_lap_complete(self):
+        """
+        Check if the car has crossed the finish line after minimum lap time.
+        Returns True if lap is completed, else False.
+        """
+        if self.time < self.min_lap_time:
+            return False  # too early to complete lap
+
+        if len(self.positions) < 2:
+            return False  # not enough position history to detect crossing
+
+        prev_pos = Point(self.positions[-2])
+        curr_pos = Point(self.positions[-1])
+        car_path = LineString([prev_pos, curr_pos])
+
+        # Check if car path crosses the finish line and has not already crossed this lap
+        if car_path.crosses(self.finish_line) and not self.crossed_finish_line:
+            self.crossed_finish_line = True
+            return True
+        elif not car_path.crosses(self.finish_line) and self.crossed_finish_line:
+            # Reset flag once car moves away from finish line to allow next lap detection
+            self.crossed_finish_line = False
+
+        return False
+
+    def render(self, race_line=False):
         '''
         Renders the environment.
         '''
@@ -165,7 +229,7 @@ class RacingEnv(gym.Env):
             positions=self.positions,
             speeds=self.speeds,
             crash_point=self.crash_point,
-            plot_raceline=True
+            plot_raceline=race_line
         )
 
     def seed(self, seed=None):
