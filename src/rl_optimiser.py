@@ -66,6 +66,7 @@ def objective(**params):
                 lap_time = info["lap_time"]
             else:
                 lap_time = 999.0
+
             lap_times.append(lap_time)
 
     avg_time = np.mean(lap_times) if lap_times else 999.0
@@ -121,5 +122,5 @@ if __name__ == "__main__":
             action, _ = model.predict(obs, deterministic=True)
             obs, _, done, info = env.step(action)
 
-        env.render(race_line=True)  # this will call your custom plot function
+        env.render()  # this will call your custom plot function
         print(info)
