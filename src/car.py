@@ -59,11 +59,10 @@ class Car:
         dy = self.speed * np.sin(self.heading) * self.dt
         self.pos += np.array([dx, dy])
 
-    def get_feature_vector(self, track, path_points):
+    def get_feature_vector(self, track):
         """
         Extract features from the car's state and the track.
         :param track: The track data.
-        :param path_points: The path points for the track.
         :return: Feature vector.
         """
-        return extract_features(self, track, path_points)
+        return extract_features(self, track)

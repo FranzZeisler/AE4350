@@ -9,7 +9,7 @@ from visualisation import plot_track_and_trajectory  # your helper
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt=0.01):  # Allow dt to be passed in
+    def __init__(self, track_name, dt=0.01):
         '''
         Initialize the Racing Environment.
         Args:
@@ -22,13 +22,22 @@ class RacingEnv(gym.Env):
         self.path    = np.stack((self.track["x_c"], self.track["y_c"]), axis=1)
         self.polygon = build_track_polygon(self.track)
 
+        # Precompute cumulative track lengths for progress calculation
+        self.cumulative_lengths = np.zeros(len(self.path))
+        for i in range(1, len(self.path)):
+            self.cumulative_lengths[i] = self.cumulative_lengths[i-1] + np.linalg.norm(self.path[i] - self.path[i-1])
+        self.total_length = self.cumulative_lengths[-1]
+
         # Action/Observation spaces
-        self.action_space      = spaces.Box(-1.0, 1.0, shape=(2,), dtype=np.float32) # steer, throttle
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32) # depends on the selected feature vector
-        
+        self.action_space      = spaces.Box(-1.0, 1.0, shape=(2,), dtype=np.float32)  # steer, throttle
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32)  # updated feature vector length
+
         # Track completion parameters
-        self.max_time = 300.0 # seconds
-        self.lap_radius = 5.0 # meters
+        self.max_time = 300.0  # seconds
+        self.lap_radius = 5.0  # meters
+
+        # Car progress tracking
+        self.prev_progress = 0.0  # float progress fraction
 
         # Variables for Rendering
         self.positions = []
@@ -46,14 +55,15 @@ class RacingEnv(gym.Env):
         hdg0    = self.track["heading"][0]
         self.car = Car(x0, y0, hdg0, dt=self.dt)
         self.time = 0.0
+        self.prev_progress = 0.0  # reset progress
 
         # Reset the render buffers by re-assigning, not slicing
         self.positions = [self.car.pos.copy()]
         self.speeds    = [self.car.speed]
         self.crash_point = None
 
-        # Return the observation
-        return self.car.get_feature_vector(self.track, self.path)
+        # Return the initial observation
+        return self.car.get_feature_vector(self.track)
     
     def step(self, action):
         '''
@@ -67,8 +77,8 @@ class RacingEnv(gym.Env):
             info (dict): Additional information about the environment.
         '''
         # 1) Scale agent action to real controls
-        steer_agent    = action[0] * self.car.max_steer_rate
-        throttle_agent = (action[1] + 1.0) / 2.0  # scale to [0, 1]
+        steer_agent    = action[0]
+        throttle_agent = action[1]
 
         # 2) Update car dynamics
         self.car.update(steer_agent, throttle_agent)
@@ -79,37 +89,72 @@ class RacingEnv(gym.Env):
         self.speeds.append(self.car.speed)
 
         # 4) Get observation (feature vector)
-        features = self.car.get_feature_vector(self.track, self.path)
+        features = self.car.get_feature_vector(self.track)
         
         # 5) Check termination conditions
         done = False
         info = {}
         if not self.polygon.contains(Point(*self.car.pos)):
             done = True
-            perf_reward = -20.0  # light crash penalty
+            fitness = -20.0  # light crash penalty
             self.crash_point = self.car.pos.copy()
             info["termination"] = "crash"
         elif self.time > 10.0 and np.linalg.norm(self.car.pos - self.path[0]) < self.lap_radius:
             done = True
-            perf_reward = +100.0
+            fitness = +100.0
             info["termination"] = "lap_complete"
+            info["lap_time"] = self.time
         elif self.time >= self.max_time:
             done = True
-            perf_reward = 0.0
+            fitness = 0.0
             info["termination"] = "timeout"
         else:
-            
-            # 6) Reward for driving straight and fast
-            # TODO: Implement the reward function here
-            centripetal_penalty = -0.02 * abs(self.car.last_centripetal)   # discourage turning
-            accel_bonus         = +1.5 * throttle_agent                    # reward acceleration
-            speed_bonus         = +0.1 * self.car.speed                    # encourage speed
+            # 6) Update fitness score
+            fitness = self.update_fitness(action)
 
-            perf_reward = accel_bonus + speed_bonus + centripetal_penalty
+        # 7) Return obs, reward, done, info
+        return features, fitness, done, info
+    
+    def update_fitness(self, action):
+        '''
+        Update the fitness score based on the car's performance.
+        Args:
+            action (np.ndarray): The action taken by the agent.
+        Returns:
+            fitness (float): The updated fitness score.
+        '''
+        # Progress reward
+        progress_delta = self.compute_progress()
+        progress_bonus = progress_delta * 20.0  # tune scaling factor
 
-        # 7) Return obs, reward, done
-        return features, perf_reward, done, info
+        # Throttle reward
+        accel_bonus = +1.5 * action[1]
 
+        # Speed reward
+        speed_norm = self.car.speed / self.car.max_speed
+        speed_bonus = +0.1 * speed_norm
+
+        return progress_bonus + accel_bonus + speed_bonus 
+
+    def compute_progress(self):
+        """
+        Computes the percentage of progress made along the track centerline (0.0 to 1.0).
+        Returns:
+            progress_delta (float): Progress since last step as fraction of total track length.
+        """
+        # Find closest point on path
+        dists = np.linalg.norm(self.path - self.car.pos, axis=1)
+        idx = np.argmin(dists)
+        
+        # Get cumulative length at closest point
+        current_length = self.cumulative_lengths[idx]
+        current_progress = current_length / self.total_length
+        
+        prev_progress = self.prev_progress
+        
+        self.prev_progress = current_progress
+        
+        return current_progress - prev_progress
 
     def render(self):
         '''
@@ -119,7 +164,8 @@ class RacingEnv(gym.Env):
             self.track,
             positions=self.positions,
             speeds=self.speeds,
-            crash_point=self.crash_point
+            crash_point=self.crash_point,
+            plot_raceline=True
         )
 
     def seed(self, seed=None):
@@ -129,18 +175,3 @@ class RacingEnv(gym.Env):
             seed (int): The random seed to set.
         '''
         np.random.seed(seed)
-
-    def _progress(self, prev_pos, new_pos):
-        '''
-        Calculate the progress made by the car.
-        Args:
-            prev_pos (np.ndarray): The previous position of the car.
-            new_pos (np.ndarray): The new position of the car.
-        Returns:
-            int: The progress made by the car.
-        '''
-        d0 = np.linalg.norm(self.path - prev_pos, axis=1)
-        d1 = np.linalg.norm(self.path - new_pos,  axis=1)
-        i0 = np.argmin(d0)
-        i1 = np.argmin(d1)
-        return max(0, i1 - i0)
