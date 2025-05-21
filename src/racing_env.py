@@ -107,7 +107,6 @@ class RacingEnv(gym.Env):
             info (dict): Additional information about the environment.
         '''
         steer_agent, throttle_agent = action
-        print(f"Action: steer={steer_agent}, throttle={throttle_agent}")
 
         # Update car dynamics
         self.car.update(steer_agent, throttle_agent)
@@ -154,7 +153,25 @@ class RacingEnv(gym.Env):
 
 
     def update_fitness(self, action, info):
-        return self.car.speed / self.car.max_speed
+
+        """
+        Reward = distance progressed * (discount_factor ^ time_elapsed)
+        Encourages fast, efficient progress along the track.
+        """
+        # 1. Compute progress as fraction of total track
+        progress_delta = self.compute_progress()
+
+        # 3. Discount factor (tune as needed)
+        discount_factor = 0.95  # Per second
+
+        # 4. Compute total elapsed time (in seconds)
+        time_elapsed = self.time
+
+        # 5. Apply exponential discount
+        discounted_reward = progress_delta * (discount_factor ** time_elapsed)
+
+        return discounted_reward
+
       
     def compute_progress(self):
         """
@@ -167,11 +184,16 @@ class RacingEnv(gym.Env):
 
         current_length = self.cumulative_lengths[idx]
         current_progress = current_length / self.total_length
-        
-        prev_progress = self.prev_progress
+
+        delta = current_progress - self.prev_progress
+
+        # Fix wrap-around error when crossing the lap start line
+        if delta < -0.5:
+            delta += 1.0
+
         self.prev_progress = current_progress
-        
-        return current_progress - prev_progress
+        return delta
+
 
     def check_lap_complete(self):
         """
