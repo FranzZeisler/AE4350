@@ -1,17 +1,19 @@
 import numpy as np
 from stable_baselines3 import PPO
-from racing_env import RacingEnv
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.utils import set_random_seed
 from skopt import gp_minimize
 from skopt.utils import use_named_args
 from skopt.space import Integer, Real
+from racing_env import RacingEnv
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="stable_baselines3")
 
-from stable_baselines3.common.utils import set_random_seed
+# TRAIN on these
+training_tracks = ["Austin", "Budapest", "Catalunya"]
+testing_tracks = ["Spa", "Spielberg", "Suzuka", "YasMarina", "Zandvoort"]
 
-# Define training/testing tracks
-training_tracks = ["Austin"]
-testing_tracks = ["Austin"]
-
-# Define the search space for reward parameters
+# Define search space for reward parameters
 space = [
     Integer(-1000, -100, name="crash_penalty"),
     Integer(0, 500, name="lap_complete_reward"),
@@ -25,12 +27,10 @@ best_model_path = "best_model.zip"
 best_lap_time = [float("inf")]
 best_params = {}
 
-@use_named_args(space)
-def objective(**params):
-    lap_times = []
-
-    for track_name in training_tracks:
-        env = RacingEnv(
+# Helper: create vec environment for all training tracks
+def make_training_env(params):
+    def make_env(track_name):
+        return lambda: RacingEnv(
             track_name=track_name,
             dt=0.1,
             crash_penalty=params["crash_penalty"],
@@ -40,72 +40,77 @@ def objective(**params):
             steering_penalty=params["steering_penalty"],
             speed_reward=params["speed_reward"]
         )
+    return DummyVecEnv([make_env(t) for t in training_tracks])
 
-        set_random_seed(42)
-        model = PPO("MlpPolicy", env, verbose=0, seed=42)
-        model.learn(total_timesteps=20000)
+@use_named_args(space)
+def objective(**params):
+    print("\n🔍 Trying reward parameters:")
+    for key, value in params.items():
+        print(f" - {key}: {value}")
+    
+    env = make_training_env(params)
+    set_random_seed(42)
+    model = PPO("MlpPolicy", env, verbose=0, seed=42)
+    model.learn(total_timesteps=20000)
 
-        for test_track in testing_tracks:
-            test_env = RacingEnv(
-                track_name=test_track,
-                dt=0.1,
-                crash_penalty=params["crash_penalty"],
-                lap_complete_reward=params["lap_complete_reward"],
-                progress_reward_scale=params["progress_reward_scale"],
-                acceleration_reward=params["acceleration_reward"],
-                steering_penalty=params["steering_penalty"],
-                speed_reward=params["speed_reward"]
-            )
-            obs = test_env.reset()
-            done = False
-            while not done:
-                action, _ = model.predict(obs, deterministic=True)
-                obs, _, done, info = test_env.step(action)
+    lap_times = []
 
-            if info.get("termination") == "lap_complete":
-                lap_time = info["lap_time"]
-            else:
-                lap_time = 999.0
+    # Evaluate on training tracks (not testing tracks!)
+    for track in training_tracks:
+        eval_env = RacingEnv(
+            track_name=track,
+            dt=0.1,
+            crash_penalty=params["crash_penalty"],
+            lap_complete_reward=params["lap_complete_reward"],
+            progress_reward_scale=params["progress_reward_scale"],
+            acceleration_reward=params["acceleration_reward"],
+            steering_penalty=params["steering_penalty"],
+            speed_reward=params["speed_reward"]
+        )
 
-            lap_times.append(lap_time)
+        obs = eval_env.reset()
+        done = False
+        while not done:
+            action, _ = model.predict(obs, deterministic=True)
+            obs, _, done, info = eval_env.step(action)
 
-    avg_time = np.mean(lap_times) if lap_times else 999.0
-    print(f"Average lap time: {avg_time:.2f} seconds")
+        lap_time = info.get("lap_time", 999.0) if info.get("termination") == "lap_complete" else 999.0
+        lap_times.append(lap_time)
 
-    # Save best model and params
-    if avg_time < best_lap_time[0]:
-        best_lap_time[0] = avg_time
+    avg_lap = np.mean(lap_times) if lap_times else 999.0
+    print(f"\n📉 Avg Training Lap Time: {avg_lap:.2f}")
+
+    if avg_lap < best_lap_time[0]:
+        best_lap_time[0] = avg_lap
         model.save(best_model_path)
         best_params.clear()
         best_params.update(params)
-        print("New best model saved.")
+        print("✅ New best model saved!")
 
-    return avg_time
-
+    return avg_lap
 
 if __name__ == "__main__":
     result = gp_minimize(
         objective,
         space,
-        n_calls=10,
-        n_initial_points=3,
+        n_calls=5,
+        n_initial_points=5,
         acq_func="EI",
         random_state=42,
         verbose=True,
     )
 
-    print("\n✅ Best lap time: {:.2f} seconds".format(result.fun))
-    print("🏁 Best reward parameters:")
+    print("\n🏁 Best avg training lap time: {:.2f} seconds".format(result.fun))
+    print("🏆 Best reward parameters:")
     for name, val in zip([dim.name for dim in space], result.x):
         print(f" - {name}: {val}")
 
-    # Load the saved best model and render it
-    from stable_baselines3 import PPO
+    # Load best model and test on generalization tracks
     model = PPO.load(best_model_path)
 
     for track_name in testing_tracks:
-        print(f"\n🎥 Rendering best model on track: {track_name}")
-        env = RacingEnv(
+        print(f"\n🎥 Testing best model on unseen track: {track_name}")
+        test_env = RacingEnv(
             track_name=track_name,
             dt=0.1,
             crash_penalty=best_params["crash_penalty"],
@@ -116,11 +121,11 @@ if __name__ == "__main__":
             speed_reward=best_params["speed_reward"]
         )
 
-        obs = env.reset()
+        obs = test_env.reset()
         done = False
         while not done:
             action, _ = model.predict(obs, deterministic=True)
-            obs, _, done, info = env.step(action)
+            obs, _, done, info = test_env.step(action)
 
-        env.render()  # this will call your custom plot function
-        print(info)
+        test_env.render()
+        print(f"🧪 Test Info: {info}")

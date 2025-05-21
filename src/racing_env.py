@@ -21,12 +21,12 @@ class RacingEnv(gym.Env):
         Args:
             track_name (str): The name of the track to load.
             dt (float): Time step for the simulation.
-            progress_reward_scale (float): Scale for progress reward.
-            forward_vel_reward_scale (float): Scale for forward velocity reward.
-            lateral_penalty_scale (float): Scale for lateral penalty.
             crash_penalty (float): Penalty for crashing.
             lap_complete_reward (float): Reward for completing a lap.
-            steering_smoothness_penalty_scale (float): Scale for steering smoothness penalty.
+            progress_reward_scale (float): Scaling factor for progress reward.
+            acceleration_reward (float): Reward for acceleration.
+            steering_penalty (float): Penalty for steering.
+            speed_reward (float): Reward for speed.
         '''
         super().__init__()
         self.dt = dt
@@ -52,6 +52,8 @@ class RacingEnv(gym.Env):
         # Car progress tracking
         self.prev_progress = 0.0  # float progress fraction
         self.prev_steering_angle = 0.0
+        self.sim_index = 0
+        self.discount = 0.98
 
         # Variables for Rendering
         self.positions = []
@@ -92,6 +94,7 @@ class RacingEnv(gym.Env):
         self.time = 0.0
         self.prev_progress = 0.0
         self.prev_steering_angle = self.car.steering_angle
+        self.sim_index = 0
 
         # Reset the render buffers
         self.positions = [self.car.pos.copy()]
@@ -138,18 +141,25 @@ class RacingEnv(gym.Env):
         elif self.check_lap_complete():
             done = True
             info["termination"] = "lap_complete"
-            info["lap_time"] = self.time
+            info["lap_time"] = self.format_lap_time(self.time)
         elif self.time >= self.max_time:
             done = True
             info["termination"] = "timeout"
 
         # Calculate reward
-        reward = self.update_fitness(action, done, info)
+        #reward = self.update_fitness(action, done, info)
+        reward = self.alternative_update_fitness(action)
 
         # Save previous steering angle for smoothness penalty next step
         self.prev_steering_angle = self.car.steering_angle
 
         return features, reward, done, info
+
+    def format_lap_time(self, time_seconds):
+        minutes = int(time_seconds // 60)
+        seconds = int(time_seconds % 60)
+        milliseconds = int((time_seconds - int(time_seconds)) * 1000)
+        return f"{minutes}:{seconds:02d}.{milliseconds:03d}"
 
     def update_fitness(self, action, done=False, info=None):
         if info is None:
@@ -172,11 +182,31 @@ class RacingEnv(gym.Env):
         speed_norm = self.car.speed / self.car.max_speed
         speed_bonus = self.speed_reward * speed_norm
 
-
         total_reward = progress_bonus + accel_bonus + speed_bonus + steer_penalty
 
         return total_reward
 
+
+    def alternative_update_fitness(self, action):
+        """
+        Alternative reward calculation using discounted immediate progress reward.
+        Reward is: delta_distance_travelled * (discount ** (sim_index * dt))
+        """
+        # Calculate progress delta (distance travelled fraction)
+        progress_delta = self.compute_progress()  # fraction of total track length
+        delta_distance_travelled = progress_delta * self.total_length  # convert fraction to meters
+
+        # Discounted reward
+        discounted_reward = delta_distance_travelled * (self.discount ** (self.sim_index * self.dt))
+
+        # Also add acceleration incentive
+        accel_bonus = self.acceleration_reward * action[1]
+        
+        # Total reward is the sum of discounted progress and speed bonus
+        total_reward = discounted_reward + accel_bonus
+
+        return total_reward
+    
 
     def compute_progress(self):
         """
