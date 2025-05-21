@@ -26,6 +26,7 @@ class Car:
         self.max_lateral_accel = 4.0 * 9.81       # m/s²
 
         self.dt = dt
+        self.velocity = np.array([0.0, 0.0])
 
     def update(self, steer, throttle):
         """
@@ -55,9 +56,15 @@ class Car:
 
         # Update heading and position
         self.heading += angular_velocity * self.dt
-        dx = self.speed * np.cos(self.heading) * self.dt
-        dy = self.speed * np.sin(self.heading) * self.dt
-        self.pos += np.array([dx, dy])
+        
+        # Update velocity vector in world frame
+        self.velocity = np.array([
+            self.speed * np.cos(self.heading),
+            self.speed * np.sin(self.heading)
+        ])
+
+        # Update position
+        self.pos += self.velocity * self.dt
 
     def get_feature_vector(self, track):
         """

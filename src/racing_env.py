@@ -161,14 +161,17 @@ class RacingEnv(gym.Env):
         # 1. Compute progress as fraction of total track
         progress_delta = self.compute_progress()
 
+        # 2. Convert fractional progress into real distance
+        delta_distance = progress_delta * self.total_length
+
         # 3. Discount factor (tune as needed)
-        discount_factor = 0.95  # Per second
+        discount_factor = 0.98  # Per second
 
         # 4. Compute total elapsed time (in seconds)
         time_elapsed = self.time
 
         # 5. Apply exponential discount
-        discounted_reward = progress_delta * (discount_factor ** time_elapsed)
+        discounted_reward = delta_distance * (discount_factor ** time_elapsed)
 
         return discounted_reward
 
