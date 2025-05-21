@@ -107,6 +107,7 @@ class RacingEnv(gym.Env):
             info (dict): Additional information about the environment.
         '''
         steer_agent, throttle_agent = action
+        print(f"Action: steer={steer_agent}, throttle={throttle_agent}")
 
         # Update car dynamics
         self.car.update(steer_agent, throttle_agent)
@@ -153,19 +154,7 @@ class RacingEnv(gym.Env):
 
 
     def update_fitness(self, action, info):
-        # Sparse terminal rewards
-        if "termination" in info:
-            if info["termination"] == "crash":
-                return -1.0
-            elif info["termination"] == "lap_complete":
-                return +10.0
-            else:
-                return 0.0
-
-        r_speed = np.clip((self.car.speed / self.car.max_speed) ** 2, -1.0, 1.0)
-        return r_speed
-
-
+        return self.car.speed / self.car.max_speed
       
     def compute_progress(self):
         """

@@ -114,4 +114,5 @@ def simulate_track_pursuit(
         plot_track_and_trajectory(track, positions, speeds=speeds, crash_point=crash_point)
 
     # Return the time elapsed and expert dataset
+    print(f"Expert dataset size: {len(expert_dataset)}")
     return time_elapsed, expert_dataset

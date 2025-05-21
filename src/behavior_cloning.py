@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,9 +8,9 @@ class BCActor(nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 256), nn.ReLU(),
-            nn.Linear(256, 256), nn.ReLU(),
-            nn.Linear(256, output_dim), nn.Tanh()  # Assuming output normalized to [-1,1]
+            nn.Linear(input_dim, 400), nn.ReLU(),
+            nn.Linear(400, 300), nn.ReLU(),
+            nn.Linear(300, output_dim), nn.Tanh()  # Assuming output normalized to [-1,1]
         )
 
     def forward(self, x):
