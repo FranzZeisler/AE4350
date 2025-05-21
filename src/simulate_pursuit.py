@@ -33,6 +33,7 @@ def simulate_track_pursuit(
         plot_speed (bool): Whether to plot the track and trajectory.
     Returns:
         float: Time elapsed during the simulation.
+        list: Expert dataset of (observation, action) tuples.
     """
 
     # Initialize car at the start of the centerline
@@ -53,6 +54,9 @@ def simulate_track_pursuit(
     speeds = []
     time_elapsed = 0.0
     crash_point = None
+
+    # Expert dataset to store (obs, action)
+    expert_dataset = []
 
     # Simulation loop
     # Loop until max_time is reached or car crashes
@@ -78,6 +82,13 @@ def simulate_track_pursuit(
         # Smooth the steering input
         steer = smooth_steering(steer, car.steering_angle, alpha)
 
+        # Get observation vector from the car for RL
+        obs = car.get_feature_vector(track)
+        # Create action vector
+        action = np.array([steer, throttle])
+        # Append to expert dataset
+        expert_dataset.append((obs, action))
+
         # Update car state
         car.update(steer, throttle)
         positions.append(car.pos.copy())
@@ -102,5 +113,5 @@ def simulate_track_pursuit(
     if plot_speed:
         plot_track_and_trajectory(track, positions, speeds=speeds, crash_point=crash_point)
 
-    # Return the time elapsed
-    return time_elapsed
+    # Return the time elapsed and expert dataset
+    return time_elapsed, expert_dataset

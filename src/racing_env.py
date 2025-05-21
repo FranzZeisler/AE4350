@@ -15,14 +15,12 @@ MIN_LAP_TIME = 10.0    # Minimum time before lap can be considered complete (sec
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt, reward_factor):
+    def __init__(self, track_name, dt):
         '''
         Initialize the Racing Environment.
         Args:
             track_name (str): The name of the track to load.
             dt (float): Time step for the simulation.
-            acceleration_reward (float): Reward for acceleration.
-
         '''
         super().__init__()
         self.dt = dt
@@ -48,7 +46,6 @@ class RacingEnv(gym.Env):
         # Car progress tracking
         self.prev_progress = 0.0  # float progress fraction
         self.steps = 0
-        self.reward_factor = reward_factor
 
         # Variables for Rendering
         self.positions = []
@@ -156,17 +153,17 @@ class RacingEnv(gym.Env):
 
 
     def update_fitness(self, action, info):
+        # Sparse terminal rewards
         if "termination" in info:
             if info["termination"] == "crash":
                 return -1.0
             elif info["termination"] == "lap_complete":
-                return 1.0
+                return +10.0
             else:
                 return 0.0
-        else:
-            progress = self.compute_progress()
-            speed_reward = self.car.speed / self.car.max_speed
-            return 0.7 * progress + 0.3 * speed_reward
+
+        r_speed = np.clip((self.car.speed / self.car.max_speed) ** 2, -1.0, 1.0)
+        return r_speed
 
 
       
