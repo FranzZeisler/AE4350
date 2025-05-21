@@ -15,7 +15,7 @@ MIN_LAP_TIME = 10.0    # Minimum time before lap can be considered complete (sec
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt, acceleration_reward):
+    def __init__(self, track_name, dt, reward_factor):
         '''
         Initialize the Racing Environment.
         Args:
@@ -47,15 +47,13 @@ class RacingEnv(gym.Env):
 
         # Car progress tracking
         self.prev_progress = 0.0  # float progress fraction
-        self.prev_steering_angle = 0.0
+        self.steps = 0
+        self.reward_factor = reward_factor
 
         # Variables for Rendering
         self.positions = []
         self.speeds = []
         self.crash_point = None
-
-        # Set the parameters for rewards
-        self.acceleration_reward = acceleration_reward
 
         # Define finish line as a small line segment perpendicular to track start direction
         self.define_finish_line()
@@ -88,7 +86,7 @@ class RacingEnv(gym.Env):
         self.car = Car(x0, y0, hdg0, dt=self.dt)
         self.time = 0.0
         self.prev_progress = 0.0
-        self.prev_steering_angle = self.car.steering_angle
+        self.steps = 0
 
         # Reset the render buffers
         self.positions = [self.car.pos.copy()]
@@ -143,10 +141,10 @@ class RacingEnv(gym.Env):
 
         # Calculate reward
         #reward = self.update_fitness(action, done, info)
-        reward = self.update_fitness(action)
+        reward = self.update_fitness(action, info)
 
-        # Save previous steering angle for smoothness penalty next step
-        self.prev_steering_angle = self.car.steering_angle
+        #Update number steps
+        self.steps += 1
 
         return features, reward, done, info
 
@@ -157,18 +155,20 @@ class RacingEnv(gym.Env):
         return f"{minutes}:{seconds:02d}.{milliseconds:03d}"
 
 
-    def update_fitness(self, action):
-        throttle = action[1]       # throttle from -1 to 1
-
-        # Reward max throttle, penalize braking
-        if throttle > 0.99:
-            throttle_reward = self.acceleration_reward  # reward
+    def update_fitness(self, action, info):
+        """
+        Compute reward as combination of progress and terminal condition.
+        """
+        # Terminal condition rewards
+        if "termination" in info:
+            if info["termination"] == "crash":
+                return -1.0
+            elif info["termination"] == "lap_complete":
+                return 1.0
         else:
-            throttle_reward = -self.acceleration_reward * self.dt  # penalty scaled by timestep
+            return self.car.speed / self.car.max_speed  # Normalize speed to [0, 1]
 
-        return throttle_reward
-
-    
+      
     def compute_progress(self):
         """
         Computes the percentage of progress made along the track centerline (0.0 to 1.0).
