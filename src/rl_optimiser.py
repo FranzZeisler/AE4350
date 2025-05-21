@@ -15,12 +15,7 @@ testing_tracks = ["Spa", "Spielberg", "Suzuka", "YasMarina", "Zandvoort"]
 
 # Define search space for reward parameters
 space = [
-    Integer(-1000, -100, name="crash_penalty"),
-    Integer(0, 500, name="lap_complete_reward"),
-    Integer(0, 100, name="progress_reward_scale"),
-    Integer(0, 10, name="acceleration_reward"),
-    Integer(-20, 0, name="steering_penalty"),
-    Real(0, 0.5, name="speed_reward"),
+    Integer(0, 500, name="acceleration_reward"),
 ]
 
 best_model_path = "best_model.zip"
@@ -33,9 +28,6 @@ def make_training_env(params):
         return lambda: RacingEnv(
             track_name=track_name,
             dt=0.1,
-            crash_penalty=params["crash_penalty"],
-            lap_complete_reward=params["lap_complete_reward"],
-            progress_reward_scale=params["progress_reward_scale"],
             acceleration_reward=params["acceleration_reward"],
             steering_penalty=params["steering_penalty"],
             speed_reward=params["speed_reward"]
@@ -60,9 +52,6 @@ def objective(**params):
         eval_env = RacingEnv(
             track_name=track,
             dt=0.1,
-            crash_penalty=params["crash_penalty"],
-            lap_complete_reward=params["lap_complete_reward"],
-            progress_reward_scale=params["progress_reward_scale"],
             acceleration_reward=params["acceleration_reward"],
             steering_penalty=params["steering_penalty"],
             speed_reward=params["speed_reward"]
@@ -93,7 +82,7 @@ if __name__ == "__main__":
     result = gp_minimize(
         objective,
         space,
-        n_calls=5,
+        n_calls=20,
         n_initial_points=5,
         acq_func="EI",
         random_state=42,
@@ -113,9 +102,6 @@ if __name__ == "__main__":
         test_env = RacingEnv(
             track_name=track_name,
             dt=0.1,
-            crash_penalty=best_params["crash_penalty"],
-            lap_complete_reward=best_params["lap_complete_reward"],
-            progress_reward_scale=best_params["progress_reward_scale"],
             acceleration_reward=best_params["acceleration_reward"],
             steering_penalty=best_params["steering_penalty"],
             speed_reward=best_params["speed_reward"]

@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="stable_baselines3")
 
 if __name__ == "__main__":
-    env = RacingEnv("Austin", dt=0.1, crash_penalty=-100, lap_complete_reward=500, progress_reward_scale=0, acceleration_reward=500, steering_penalty=-20, speed_reward=10)
+    env = RacingEnv("Spa", dt=0.1, acceleration_reward=500)
 
     # Train
     model = PPO("MlpPolicy", env, verbose=1)
