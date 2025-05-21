@@ -156,17 +156,18 @@ class RacingEnv(gym.Env):
 
 
     def update_fitness(self, action, info):
-        """
-        Compute reward as combination of progress and terminal condition.
-        """
-        # Terminal condition rewards
         if "termination" in info:
             if info["termination"] == "crash":
                 return -1.0
             elif info["termination"] == "lap_complete":
                 return 1.0
+            else:
+                return 0.0
         else:
-            return self.car.speed / self.car.max_speed  # Normalize speed to [0, 1]
+            progress = self.compute_progress()
+            speed_reward = self.car.speed / self.car.max_speed
+            return 0.7 * progress + 0.3 * speed_reward
+
 
       
     def compute_progress(self):
