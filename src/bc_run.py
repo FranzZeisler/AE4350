@@ -43,7 +43,7 @@ if __name__ == "__main__":
         expert_dataset = pickle.load(f)
 
     # Train the Behavior Cloning model
-    bc_model = train_bc(expert_dataset, epochs=1000)
+    bc_model = train_bc(expert_dataset, epochs=200)
     print("Behavior Cloning training completed.")
 
     # Save the trained BC model weights
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             td3_param.copy_(bc_param)
 
     print("Loaded BC weights into TD3 actor manually.")
-    model_bc.learn(total_timesteps=2000, progress_bar=True)
+    model_bc.learn(total_timesteps=10000, progress_bar=True)
     model_bc.save(f"td3_{track_name}_with_bc.zip")
     print(f"TD3 model with BC warm start saved.")
     #---------------------------------------------------------------------------------------------------

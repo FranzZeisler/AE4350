@@ -17,6 +17,8 @@ class Car:
         self.speed = 0.0              # m/s
 
         self.steering_angle = 0.0    # radians
+        self.prev_steering_angle = 0.0
+        self.throttle = 0.0          # normalized throttle input (-1 to 1)
 
         self.wheelbase = 3.7          # meters
         self.max_steering_angle = np.deg2rad(30)  # max steering angle
@@ -35,10 +37,10 @@ class Car:
         :param throttle: Throttle input (-1 to 1)
         """
         # Clamp inputs
-        steer = np.clip(steer, -self.max_steering_angle, self.max_steering_angle)
+        self.prev_steering_angle = self.steering_angle
+        self.steering_angle = np.clip(steer, -self.max_steering_angle, self.max_steering_angle)
         throttle = np.clip(throttle, -1, 1)
-
-        self.steering_angle = steer
+        self.throttle = throttle
 
         # Update speed with simple acceleration model
         accel = throttle * self.max_accel

@@ -163,17 +163,10 @@ class RacingEnv(gym.Env):
         Reward = distance progressed * (discount_factor ^ time_elapsed)
         Encourages fast, efficient progress along the track.
         """
-        # 1. Compute progress as fraction of total track
+        # 1.Discounted reward
         progress_delta = self.compute_progress()
-
-        # 2. Convert fractional progress into real distance
-        delta_distance = progress_delta * self.total_length
-
-        # 4. Compute total elapsed time (in seconds)
         time_elapsed = self.time
-
-        # 5. Apply exponential discount
-        discounted_reward = delta_distance * (self.discount_factor ** time_elapsed)
+        discounted_reward = progress_delta * (self.discount_factor ** time_elapsed)
 
         return discounted_reward
 
@@ -182,21 +175,30 @@ class RacingEnv(gym.Env):
         """
         Computes the percentage of progress made along the track centerline (0.0 to 1.0).
         Returns:
-            progress_delta (float): Progress since last step as fraction of total track length.
+            progress_delta (float): Progress since last step as a fraction of total track length.
         """
+        # 1. Calculate the distance from the car to each point along the track
         dists = np.linalg.norm(self.path - self.car.pos, axis=1)
-        idx = np.argmin(dists)
 
-        current_length = self.cumulative_lengths[idx]
+        # 2. Find the index of the closest point on the track
+        closest_idx = np.argmin(dists)
+
+        # 3. Get the cumulative length up to the closest point on the track
+        current_length = self.cumulative_lengths[closest_idx]
+
+        # 4. Calculate the normalized progress (current position along the track)
         current_progress = current_length / self.total_length
 
+        # 5. Calculate the change in progress compared to the previous step
         delta = current_progress - self.prev_progress
 
-        # Fix wrap-around error when crossing the lap start line
+        # 6. Handle wrap-around if the car crosses the start line (i.e., completing a lap)
         if delta < -0.5:
-            delta += 1.0
+            delta += 1.0  # Adjust to handle crossing the starting line
 
+        # 7. Update the previous progress for the next step
         self.prev_progress = current_progress
+
         return delta
 
 
