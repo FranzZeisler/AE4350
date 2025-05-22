@@ -1,0 +1,39 @@
+2025-05-23 00:58:17,955 - INFO - Step 1 - Simulating track with pure pursuit control to generate expert dataset
+2025-05-23 00:58:19,750 - INFO - Time elapsed: 62.36 seconds
+2025-05-23 00:58:19,790 - INFO - Expert dataset saved as Spielberg_expert_dataset.pkl
+2025-05-23 00:58:19,791 - INFO - Step 2 - Training Behavior Cloning model on expert dataset
+2025-05-23 00:58:19,791 - INFO - Starting Behavior Cloning training...
+2025-05-23 00:58:28,523 - INFO - Behavior Cloning training completed.
+2025-05-23 00:58:28,527 - INFO - BC model weights saved as bc_actorSpielberg.pth
+2025-05-23 00:58:28,527 - INFO - Step 2.5 - Evaluating Behavior Cloning (BC) policy alone
+2025-05-23 00:58:28,565 - INFO - BC model evaluation info: {'termination': 'crash', 'lap_time': 999.0}
+2025-05-23 00:58:31,018 - INFO - Step 3 - Training TD3 WITH Behavior Cloning warm-up
+2025-05-23 00:58:31,158 - INFO - Loaded BC weights into TD3 actor manually.
+2025-05-23 01:01:28,952 - INFO - TD3 model with BC warm start saved.
+2025-05-23 01:01:28,952 - INFO - Step 4 - Evaluating the trained TD3 model with BC warm start
+2025-05-23 01:01:30,232 - INFO - TD3 model evaluation info: {'termination': 'lap_complete', 'lap_time': 106.69999999999821}
+2025-05-23 01:01:57,269 - INFO - Step 1 - Simulating track with pure pursuit control to generate expert dataset
+2025-05-23 01:01:59,196 - INFO - Time elapsed: 62.36 seconds
+2025-05-23 01:01:59,230 - INFO - Expert dataset saved as Spielberg_expert_dataset.pkl
+2025-05-23 01:01:59,230 - INFO - Step 2 - Training Behavior Cloning model on expert dataset
+2025-05-23 01:01:59,230 - INFO - Starting Behavior Cloning training...
+2025-05-23 01:02:10,150 - INFO - Behavior Cloning training completed.
+2025-05-23 01:02:10,155 - INFO - BC model weights saved as bc_actorSpielberg.pth
+2025-05-23 01:02:10,155 - INFO - Step 2.5 - Evaluating Behavior Cloning (BC) policy alone
+2025-05-23 01:02:10,195 - INFO - BC model evaluation info: {'termination': 'crash', 'lap_time': 999.0}
+2025-05-23 01:02:13,713 - INFO - Step 3 - Training TD3 WITH Behavior Cloning warm-up
+2025-05-23 01:02:13,915 - INFO - Loaded BC weights into TD3 actor manually.
+2025-05-23 01:05:10,404 - INFO - TD3 model with BC warm start saved.
+2025-05-23 01:05:10,404 - INFO - Step 4 - Evaluating the trained TD3 model with BC warm start
+2025-05-23 01:05:10,411 - INFO - TD3 model evaluation info: {'termination': 'crash', 'lap_time': 999.0}
+2025-05-23 01:05:36,940 - INFO - Step 1 - Simulating track with pure pursuit control to generate expert dataset
+2025-05-23 01:05:39,081 - INFO - Time elapsed: 62.36 seconds
+2025-05-23 01:05:39,132 - INFO - Expert dataset saved as Spielberg_expert_dataset.pkl
+2025-05-23 01:05:39,133 - INFO - Step 2 - Training Behavior Cloning model on expert dataset
+2025-05-23 01:05:39,133 - INFO - Starting Behavior Cloning training...
+2025-05-23 01:05:50,037 - INFO - Behavior Cloning training completed.
+2025-05-23 01:05:50,046 - INFO - BC model weights saved as bc_actorSpielberg.pth
+2025-05-23 01:05:50,046 - INFO - Step 2.5 - Evaluating Behavior Cloning (BC) policy alone
+2025-05-23 01:05:50,100 - INFO - BC model evaluation info: {'termination': 'crash', 'lap_time': 999.0}
+2025-05-23 01:05:52,914 - INFO - Step 3 - Training TD3 WITH Behavior Cloning warm-up
+2025-05-23 01:05:52,989 - INFO - Loaded BC weights into TD3 actor manually.

@@ -166,7 +166,7 @@ class RacingEnv(gym.Env):
         # 1.Discounted reward
         progress_delta = self.compute_progress()
         time_elapsed = self.time
-        discounted_reward = progress_delta * (self.discount_factor ** time_elapsed)
+        discounted_reward = self.total_length * progress_delta * (self.discount_factor ** time_elapsed)
 
         return discounted_reward
 
