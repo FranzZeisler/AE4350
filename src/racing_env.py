@@ -15,7 +15,7 @@ MIN_LAP_TIME = 10.0    # Minimum time before lap can be considered complete (sec
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt, discount_factor=0.98):
+    def __init__(self, track_name, dt=0.1, discount_factor=0.98):
         '''
         Initialize the Racing Environment.
         Args:
