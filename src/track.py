@@ -39,12 +39,6 @@ class Track:
         dy = np.roll(self.y_c, -1) - self.y_c
         self.heading = np.arctan2(dy, dx)
 
-        # Fix discontinuity in headings (ensure continuous wrapping)
-        heading_diff = np.diff(self.heading)
-        heading_diff[heading_diff > np.pi] -= 2 * np.pi  # Adjust for angle overflow
-        heading_diff[heading_diff < -np.pi] += 2 * np.pi  # Adjust for angle underflow
-        self.heading[1:] = np.cumsum(heading_diff)  # Accumulate the adjusted differences
-
         # Calculate boundary coordinates by shifting centerline points perpendicular to heading
         heading_left = self.heading + np.pi / 2
         heading_right = self.heading - np.pi / 2

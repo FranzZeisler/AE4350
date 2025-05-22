@@ -60,6 +60,7 @@ class RaceTrackEnv(gym.Env):
     def step(self, action):
         """Apply the action to the car and update the environment."""
         steer, throttle = action
+        print(f"Action: steer={steer}, throttle={throttle}")
         
         # Update the car's state based on the action
         self.car.update(steer, throttle, self.track)
@@ -124,28 +125,24 @@ class RaceTrackEnv(gym.Env):
         # Plot the track and trajectory with updated positions and speeds
         plt.figure(figsize=(10, 8))
 
-        # Close and plot track boundaries
-        x_l_closed = np.append(self.track["x_l"], self.track["x_l"][0])
-        y_l_closed = np.append(self.track["y_l"], self.track["y_l"][0])
-        x_r_closed = np.append(self.track["x_r"], self.track["x_r"][0])
-        y_r_closed = np.append(self.track["y_r"], self.track["y_r"][0])
+        # Close and plot track boundaries using dot notation to access the attributes
+        x_l_closed = np.append(self.track.x_l, self.track.x_l[0])
+        y_l_closed = np.append(self.track.y_l, self.track.y_l[0])
+        x_r_closed = np.append(self.track.x_r, self.track.x_r[0])
+        y_r_closed = np.append(self.track.y_r, self.track.y_r[0])
 
+        # Plot the track boundaries
         plt.plot(x_l_closed, y_l_closed, 'r-', label="Track Boundary")
         plt.plot(x_r_closed, y_r_closed, 'r-')
 
         # Plot trajectory
-        positions = np.array(positions)
+        positions = np.array(self.positions)
         if self.speeds is not None:
             sc = plt.scatter(positions[:, 0], positions[:, 1], c=self.speeds, cmap='jet', s=5)
             cbar = plt.colorbar(sc)
             cbar.set_label("Speed (m/s)")
         else:
             plt.plot(positions[:, 0], positions[:, 1], 'k-', label="Trajectory")
-
-        # Optionally plot raceline from track dict
-        if self.plot_raceline and self.track.get("raceline") is not None:
-            raceline = np.array(self.track["raceline"])
-            plt.plot(raceline[:, 0], raceline[:, 1], 'b--', linewidth=2, label="Raceline")
 
         # Plot crash point
         if self.crash_point is not None:

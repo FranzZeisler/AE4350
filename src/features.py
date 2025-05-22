@@ -61,9 +61,6 @@ def extract_features(car, track):
     # Rangefinders: Simulate the distance from the car to the track boundaries
     rangefinders = compute_rangefinders(car, track)
     
-    # Wall contact flag: Check if the car is off-track
-    wt = compute_wall_contact_flag(car, track)
-    
     # Future curvature: Compute the track's curvature ahead of the car
     c_t = compute_future_curvature(track)
     
@@ -74,6 +71,6 @@ def extract_features(car, track):
     track_progress = car.track_progress  # Progress along the track
     
     # Combine all features into a single feature vector
-    features = np.concatenate([v_t, [a_t], [heading_error], rangefinders, [delta_t_minus_1], [wt], c_t, [track_progress]])
+    features = np.concatenate([v_t, [a_t], [heading_error], rangefinders, [delta_t_minus_1], c_t, [track_progress]])
 
     return features
