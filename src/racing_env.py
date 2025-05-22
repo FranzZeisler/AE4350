@@ -15,7 +15,7 @@ MIN_LAP_TIME = 10.0    # Minimum time before lap can be considered complete (sec
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt):
+    def __init__(self, track_name, dt, discount_factor=0.98):
         '''
         Initialize the Racing Environment.
         Args:
@@ -51,6 +51,9 @@ class RacingEnv(gym.Env):
         self.positions = []
         self.speeds = []
         self.crash_point = None
+
+        # Variable for fitness
+        self.discount_factor = discount_factor
 
         # Define finish line as a small line segment perpendicular to track start direction
         self.define_finish_line()
@@ -107,9 +110,11 @@ class RacingEnv(gym.Env):
             info (dict): Additional information about the environment.
         '''
         steer_agent, throttle_agent = action
+        steer_rad = steer_agent * self.car.max_steering_angle  # scale to radians
+        #print(f"RL Steering Raw: {steer_rad:.5f}, RL Throttle Raw: {throttle_agent:.5f}")
 
         # Update car dynamics
-        self.car.update(steer_agent, throttle_agent)
+        self.car.update(steer_rad, throttle_agent)
         self.time += self.dt
 
         # Record for rendering
@@ -126,19 +131,19 @@ class RacingEnv(gym.Env):
         if not self.polygon.contains(Point(*self.car.pos)):
             done = True
             info["termination"] = "crash"
+            info["lap_time"] = 999.0
             self.crash_point = self.car.pos.copy()
         elif self.check_lap_complete():
             done = True
             info["termination"] = "lap_complete"
-            info["lap_time"] = self.format_lap_time(self.time)
-            print(f"Lap time: {info['lap_time']}")
+            info["lap_time"] = self.time
+            print(f"Lap time: {self.format_lap_time(self.time)}")
         elif self.time >= self.max_time:
             done = True
             info["termination"] = "timeout"
 
         # Calculate reward
-        #reward = self.update_fitness(action, done, info)
-        reward = self.update_fitness(action, info)
+        reward = self.update_fitness()
 
         #Update number steps
         self.steps += 1
@@ -152,7 +157,7 @@ class RacingEnv(gym.Env):
         return f"{minutes}:{seconds:02d}.{milliseconds:03d}"
 
 
-    def update_fitness(self, action, info):
+    def update_fitness(self):
 
         """
         Reward = distance progressed * (discount_factor ^ time_elapsed)
@@ -164,14 +169,11 @@ class RacingEnv(gym.Env):
         # 2. Convert fractional progress into real distance
         delta_distance = progress_delta * self.total_length
 
-        # 3. Discount factor (tune as needed)
-        discount_factor = 0.98  # Per second
-
         # 4. Compute total elapsed time (in seconds)
         time_elapsed = self.time
 
         # 5. Apply exponential discount
-        discounted_reward = delta_distance * (discount_factor ** time_elapsed)
+        discounted_reward = delta_distance * (self.discount_factor ** time_elapsed)
 
         return discounted_reward
 

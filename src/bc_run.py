@@ -7,6 +7,7 @@ from racing_env import RacingEnv
 from simulate_pursuit import simulate_track_pursuit
 from track import load_track
 import matplotlib.pyplot as plt
+from behavior_cloning import BCActor
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="stable_baselines3")
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         expert_dataset = pickle.load(f)
 
     # Train the Behavior Cloning model
-    bc_model = train_bc(expert_dataset, epochs=100)
+    bc_model = train_bc(expert_dataset, epochs=1000)
     print("Behavior Cloning training completed.")
 
     # Save the trained BC model weights
@@ -50,15 +51,40 @@ if __name__ == "__main__":
     torch.save(bc_model.state_dict(), bc_weights_path)
     print(f"BC model weights saved as {bc_weights_path}")
     #---------------------------------------------------------------------------------------------------
-    # Step 3: Train TD3 WITH BC warm start
+    # Step 2.5: Evaluate BC Alone before training TD3
     #---------------------------------------------------------------------------------------------------
-    print("Step 3 - Training TD3 WITH Behavior Cloning warm-up")
-    env = RacingEnv(track_name=track_name, dt=0.1)
+    print("Step 2.5 - Evaluating Behavior Cloning (BC) policy alone")
+
+    # Create the environment
+    env = RacingEnv(track_name=track_name, dt=0.1, discount_factor=0.9775)
+    # Load the BC model
+    input_dim = expert_dataset[0][0].shape[0]
+    output_dim = expert_dataset[0][1].shape[0]
+    bc_actor = BCActor(input_dim, output_dim)
+    bc_actor.load_state_dict(torch.load(bc_weights_path))
+    bc_actor.eval()
+    # Reset the environment
+    obs = env.reset()
+    done = False
+    # Loop until the episode is done
+    while not done:
+        # Get action from the BC model
+        action = bc_actor(torch.FloatTensor(obs)).detach().numpy()
+        # Step the environment
+        obs, reward, done, info = env.step(action)
+        # Append position and speed to lists
+    # Print the lap time and render the trajectory
+    print(info)
+    env.render()
+    # #---------------------------------------------------------------------------------------------------
+    # # Step 3: Train TD3 WITH BC warm start
+    # #---------------------------------------------------------------------------------------------------
+    # print("Step 3 - Training TD3 WITH Behavior Cloning warm-up")
+    env = RacingEnv(track_name=track_name, dt=0.1, discount_factor=0.98)
     model_bc = TD3("MlpPolicy", env, learning_rate=3e-4, verbose=1)
 
     input_dim = expert_dataset[0][0].shape[0]
     output_dim = expert_dataset[0][1].shape[0]
-    from behavior_cloning import BCActor
     bc_actor = BCActor(input_dim, output_dim)
     bc_actor.load_state_dict(torch.load(bc_weights_path))
 
@@ -68,7 +94,7 @@ if __name__ == "__main__":
             td3_param.copy_(bc_param)
 
     print("Loaded BC weights into TD3 actor manually.")
-    model_bc.learn(total_timesteps=50000, progress_bar=True)
+    model_bc.learn(total_timesteps=2000, progress_bar=True)
     model_bc.save(f"td3_{track_name}_with_bc.zip")
     print(f"TD3 model with BC warm start saved.")
     #---------------------------------------------------------------------------------------------------

@@ -8,14 +8,12 @@ from visualisation import plot_track_and_trajectory
 
 def simulate_track_pursuit(
     track,
-    base_lookahead=6.8586,
-    lookahead_gain=0.1362,
-    alpha=0.4005,
-    throttle_threshold_1=15.0,
-    throttle_threshold_2=10.0,
+    base_lookahead=10,
+    lookahead_gain=0.05,
+    alpha=0.25,
+    throttle_threshold_1=20.0,
     throttle_1=1.0,
-    throttle_2=0.5171,
-    throttle_3=0.6,
+    throttle_2=0.8,
     plot_speed=False
 ):
     """
@@ -26,10 +24,8 @@ def simulate_track_pursuit(
         lookahead_gain (float): Gain for lookahead distance based on speed.
         alpha (float): Smoothing factor for steering input.
         throttle_threshold_1 (float): First throttle threshold in degrees.
-        throttle_threshold_2 (float): Second throttle threshold in degrees.
         throttle_1 (float): Throttle value for the first range.
         throttle_2 (float): Throttle value for the second range.
-        throttle_3 (float): Throttle value for the third range.
         plot_speed (bool): Whether to plot the track and trajectory.
     Returns:
         float: Time elapsed during the simulation.
@@ -73,19 +69,22 @@ def simulate_track_pursuit(
         throttle = compute_throttle(
             heading_error,
             throttle_threshold_1,
-            throttle_threshold_2,
             throttle_1,
             throttle_2,
-            throttle_3
         )
 
         # Smooth the steering input
         steer = smooth_steering(steer, car.steering_angle, alpha)
+        # Limit steering to [-1, 1]
+        steer_clipped = np.clip(steer, -car.max_steering_angle, car.max_steering_angle)
+        steer_normalised = steer_clipped / car.max_steering_angle  
+        #print(f"Pursuit Raw Steering: {steer:.5f}, Pursuit Raw Throttle: {throttle:.5f}")
+
 
         # Get observation vector from the car for RL
         obs = car.get_feature_vector(track)
         # Create action vector
-        action = np.array([steer, throttle])
+        action = np.array([steer_normalised, throttle])
         # Append to expert dataset
         expert_dataset.append((obs, action))
 
@@ -114,5 +113,4 @@ def simulate_track_pursuit(
         plot_track_and_trajectory(track, positions, speeds=speeds, crash_point=crash_point)
 
     # Return the time elapsed and expert dataset
-    print(f"Expert dataset size: {len(expert_dataset)}")
     return time_elapsed, expert_dataset

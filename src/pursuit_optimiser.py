@@ -21,14 +21,11 @@ testing_tracks = ["Spa", "Spielberg", "Suzuka", "YasMarina", "Zandvoort"]
 # 2. Optimization space
 # ──────────────────────────────────────────────────────────────
 space = [
-    Real(1.0, 10.0, name='base_lookahead'),
-    Real(0.05, 1.0, name='lookahead_gain'),
-    Real(0.1, 1.0, name='alpha'),
-    Integer(1, 15, name='throttle_threshold_1'),
-    Integer(10, 40, name='throttle_threshold_2'),
-    Real(0.7, 1.0, name='throttle_1'),     
+    Real(1.0, 20.0, name='base_lookahead'),
+    Real(0.05, 0.5, name='lookahead_gain'),
+    Real(0.25, 0.75, name='alpha'),
+    Integer(10, 20, name='throttle_threshold_1'),
     Real(0.3, 0.8, name='throttle_2'),
-    Real(0.1, 0.6, name='throttle_3'),
 ]
 
 # ──────────────────────────────────────────────────────────────
@@ -43,16 +40,14 @@ def objective(**params):
 
     for track in training_tracks:
         training_track = load_track(track)
-        lap_time = simulate_track_pursuit(
+        lap_time, other = simulate_track_pursuit(
             training_track,
             base_lookahead       = params['base_lookahead'],
             lookahead_gain       = params['lookahead_gain'],
             alpha                = params['alpha'],
             throttle_threshold_1 = params['throttle_threshold_1'],
-            throttle_threshold_2 = params['throttle_threshold_2'],
-            throttle_1           = params['throttle_1'],
+            throttle_1           = 1.0,
             throttle_2           = params['throttle_2'],
-            throttle_3           = params['throttle_3'],
             plot_speed=False
         )
         if lap_time == 999.0:
@@ -80,7 +75,7 @@ def objective(**params):
 result = gp_minimize(
     objective,
     space,
-    n_calls=25,
+    n_calls=50,
     n_initial_points=20,
     acq_func='EI',
     acq_optimizer='auto',
@@ -103,16 +98,14 @@ print("╰───────────────────────�
 print("\nEvaluating best params on all training tracks:")
 for track in training_tracks:
     t = load_track(track)
-    lap_time = simulate_track_pursuit(
+    lap_time, other = simulate_track_pursuit(
         t,
         base_lookahead       = result.x[0],
         lookahead_gain       = result.x[1],
         alpha                = result.x[2],
         throttle_threshold_1 = result.x[3],
-        throttle_threshold_2 = result.x[4],
-        throttle_1           = result.x[5],
-        throttle_2           = result.x[6],
-        throttle_3           = result.x[7],
+        throttle_1           = 1.0,
+        throttle_2           = result.x[4],
         plot_speed=True
     )
     print(f"Track {track}: Lap time = {lap_time:.2f}s")
@@ -123,16 +116,14 @@ for track in training_tracks:
 print("\nEvaluating on unseen test tracks:")
 for track in testing_tracks:
     t = load_track(track)
-    lap_time = simulate_track_pursuit(
+    lap_time, other = simulate_track_pursuit(
         t,
         base_lookahead       = result.x[0],
         lookahead_gain       = result.x[1],
         alpha                = result.x[2],
         throttle_threshold_1 = result.x[3],
-        throttle_threshold_2 = result.x[4],
-        throttle_1           = result.x[5],
-        throttle_2           = result.x[6],
-        throttle_3           = result.x[7],
+        throttle_1           = 1.0,
+        throttle_2           = result.x[4],
         plot_speed=True
     )
     print(f"Track {track}: Lap time = {lap_time:.2f}s")
