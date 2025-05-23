@@ -16,7 +16,7 @@ class BCActor(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-def train_bc(expert_dataset, epochs=100, batch_size=64, lr=1e-3):
+def train_bc(expert_dataset, epochs=100, batch_size=64, lr=1e-3, verbose=0):
     # Convert dataset list into tensors
     obs = torch.tensor(np.array([item[0] for item in expert_dataset]), dtype=torch.float32)
     acts = torch.tensor(np.array([item[1] for item in expert_dataset]), dtype=torch.float32)
@@ -40,8 +40,9 @@ def train_bc(expert_dataset, epochs=100, batch_size=64, lr=1e-3):
             optimizer.step()
             total_loss += loss.item() * batch_obs.size(0)
         avg_loss = total_loss / len(dataset)
-        if (epoch+1) % 10 == 0 or epoch == 0:
-            print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.6f}")
+        if verbose == 1:
+            if (epoch+1) % 10 == 0 or epoch == 0:
+                print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.6f}")
 
     return model
 

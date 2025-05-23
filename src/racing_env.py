@@ -150,10 +150,10 @@ class RacingEnv(gym.Env):
                     "positions": self.positions,
                     "speeds": self.speeds
                     }, f)
-
         elif self.time >= self.max_time:
             done = True
             info["termination"] = "timeout"
+            info["lap_time"] = 999.0
 
         # Calculate reward
         reward = self.update_fitness()
