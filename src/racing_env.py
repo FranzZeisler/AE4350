@@ -5,17 +5,19 @@ from shapely.geometry import Point, LineString
 from car import Car
 from track import load_track, build_track_polygon
 from visualisation import plot_track_and_trajectory  # your helper
+import pickle
+
 
 # === Tunable global parameters ===
 
-MAX_TIME = 300.0       # Max episode duration (seconds)
+MAX_TIME = 100.0       # Max episode duration (seconds)
 LAP_RADIUS = 5.0       # Radius to detect lap completion (meters)
 MIN_LAP_TIME = 10.0    # Minimum time before lap can be considered complete (seconds)
 
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt=0.1, discount_factor=0.98):
+    def __init__(self, track_name, dt=0.1, discount_factor=0.98, scale=1.0):
         '''
         Initialize the Racing Environment.
         Args:
@@ -54,10 +56,12 @@ class RacingEnv(gym.Env):
 
         # Variable for fitness
         self.discount_factor = discount_factor
+        self.reward_scaling = scale
 
         # Define finish line as a small line segment perpendicular to track start direction
         self.define_finish_line()
         self.crossed_finish_line = False  # Flag to detect crossing only once per lap
+        self.best_lap_time = float('inf')  # Initialize best lap time to infinity
 
     def define_finish_line(self, line_length=20.0):
         """
@@ -138,6 +142,15 @@ class RacingEnv(gym.Env):
             info["termination"] = "lap_complete"
             info["lap_time"] = self.time
             print(f"Lap time: {self.format_lap_time(self.time)}")
+            if self.time < self.best_lap_time:
+                self.best_lap_time = self.time
+                with open("log_best_lap_time.pkl", "wb") as f:
+                    pickle.dump({
+                    "best_lap_time": self.best_lap_time,
+                    "positions": self.positions,
+                    "speeds": self.speeds
+                    }, f)
+
         elif self.time >= self.max_time:
             done = True
             info["termination"] = "timeout"
@@ -158,15 +171,13 @@ class RacingEnv(gym.Env):
 
 
     def update_fitness(self):
-
         """
         Reward = distance progressed * (discount_factor ^ time_elapsed)
         Encourages fast, efficient progress along the track.
         """
-        # 1.Discounted reward
-        progress_delta = self.compute_progress()
+        distance_progressed = self.total_length * self.compute_progress()
         time_elapsed = self.time
-        discounted_reward = self.total_length * progress_delta * (self.discount_factor ** time_elapsed)
+        discounted_reward = self.reward_scaling * distance_progressed * (self.discount_factor ** time_elapsed)
 
         return discounted_reward
 

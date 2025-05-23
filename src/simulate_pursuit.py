@@ -9,10 +9,10 @@ from visualisation import plot_track_and_trajectory
 def simulate_track_pursuit(
     track,
     base_lookahead=10,
-    lookahead_gain=0.05,
+    lookahead_gain=0.1,
     alpha=0.25,
     throttle_threshold_1=20.0,
-    throttle_1=1.0,
+    throttle_1=0.7, #should be 1
     throttle_2=0.8,
     plot_speed=False
 ):
@@ -54,8 +54,10 @@ def simulate_track_pursuit(
     # Expert dataset to store (obs, action)
     expert_dataset = []
 
+    # Simulate pure pursuit progress
+    pursuit_progress = []
+
     # Simulation loop
-    # Loop until max_time is reached or car crashes
     while time_elapsed < max_time:
         # Calculate the lookahead distance based on speed
         lookahead_distance = base_lookahead + lookahead_gain * car.speed
@@ -78,8 +80,6 @@ def simulate_track_pursuit(
         # Limit steering to [-1, 1]
         steer_clipped = np.clip(steer, -car.max_steering_angle, car.max_steering_angle)
         steer_normalised = steer_clipped / car.max_steering_angle  
-        #print(f"Pursuit Raw Steering: {steer:.5f}, Pursuit Raw Throttle: {throttle:.5f}")
-
 
         # Get observation vector from the car for RL
         obs = car.get_feature_vector(track)
@@ -87,6 +87,12 @@ def simulate_track_pursuit(
         action = np.array([steer_normalised, throttle])
         # Append to expert dataset
         expert_dataset.append((obs, action))
+
+        # Record progress for both the agent and pure pursuit
+        progress_delta = compute_progress(car, path_points)
+
+        # Store the progress of the pure pursuit controller
+        pursuit_progress.append(progress_delta)
 
         # Update car state
         car.update(steer, throttle)
@@ -105,7 +111,6 @@ def simulate_track_pursuit(
         if time_elapsed > min_lap_time:
             dist_to_start = np.linalg.norm(car.pos - path_points[0])
             if dist_to_start < lap_radius:
-                #print("Lap completed! in {:.2f}s".format(time_elapsed))
                 break
 
     # If plot_speed is True, plot the track and trajectory
@@ -113,4 +118,31 @@ def simulate_track_pursuit(
         plot_track_and_trajectory(track, positions, speeds=speeds, crash_point=crash_point)
 
     # Return the time elapsed and expert dataset
-    return time_elapsed, expert_dataset
+    return time_elapsed, expert_dataset, pursuit_progress
+
+def compute_progress(car, path_points):
+    """
+    Computes the percentage of progress made along the track centerline (0.0 to 1.0).
+    Args:
+        car (Car): The car object that tracks the car's position.
+        path_points (ndarray): Track points (x, y coordinates).
+    Returns:
+        progress_delta (float): Progress since last step as a fraction of total track length.
+    """
+    # Calculate the distance from the car to each point along the track
+    dists = np.linalg.norm(path_points - car.pos, axis=1)
+
+    # Find the index of the closest point on the track
+    closest_idx = np.argmin(dists)
+
+    # Get the cumulative length up to the closest point on the track
+    current_length = np.sum(np.linalg.norm(np.diff(path_points[:closest_idx+1], axis=0), axis=1))
+
+    # Total track length
+    total_length = np.sum(np.linalg.norm(np.diff(path_points, axis=0), axis=1))
+
+    # Calculate the normalized progress (current position along the track)
+    current_progress = current_length / total_length
+
+    # Store progress for future comparison
+    return current_progress

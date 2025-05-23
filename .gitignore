@@ -19,3 +19,9 @@ dist/
 env/
 venv/
 .venv/
+
+# Add .pth files, .pkl files, .txt files, .zip files
+*.pth
+*.pkl
+*.txt
+*.zip
