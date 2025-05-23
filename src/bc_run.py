@@ -32,7 +32,7 @@ FITNESS_FUNCTION = 1
 
 # === Fixed Constant Behavioural Cloning ===
 BC_EPOCHS = 300
-TD3_TIMESTEPS = 200
+TD3_TIMESTEPS = 1000
 
 #=== File Paths ===
 BC_WEIGHTS_PATH = f"bc_actor_{TRACK_NAME}.pth"
@@ -175,6 +175,8 @@ def main(skip_sim=False, skip_bc=False):
     plt.legend()
     plt.tight_layout()
     plt.show()
+    plt.savefig(f"{TRACK_NAME}_reward_curve_{TD3_TIMESTEPS}.png")
+
 
     # Step 6: Visualise best lap after training
     logging.info("Step 6 - Visualising best lap")
@@ -195,4 +197,4 @@ def main(skip_sim=False, skip_bc=False):
         logging.info(f"Step 6 - Failed to visualise best lap: {e}")
 
 # === Direct Call Here ===
-main(skip_sim=True, skip_bc=True)
+main(skip_sim=False, skip_bc=False)
