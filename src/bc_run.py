@@ -27,7 +27,12 @@ TRACK_NAME = "Spielberg"
 DISCOUNT_FACTOR = 0.98
 SCALING_FACTOR = 1.0
 ALPHA = 0.5
+CUTOFF_TIME = 35.0
+FITNESS_FUNCTION = 1
+
+# === Fixed Constant Behavioural Cloning ===
 BC_EPOCHS = 300
+TD3_TIMESTEPS = 200
 
 #=== File Paths ===
 BC_WEIGHTS_PATH = f"bc_actor_{TRACK_NAME}.pth"
@@ -46,8 +51,6 @@ TAU = 0.005
 GAMMA = 0.99
 ACTION_NOISE_STDDEV = 0.0
 SEED = 42
-
-TD3_TIMESTEPS = 200
 
 def main(skip_sim=False, skip_bc=False):
     logging.info(f"Loading track: {TRACK_NAME}")
@@ -83,7 +86,7 @@ def main(skip_sim=False, skip_bc=False):
         
     # Step 3: Evaluate BC policy before TD3 training
     logging.info("Step 3 - Evaluating BC policy before TD3 training")
-    env = RacingEnv(track_name=TRACK_NAME, dt=0.1, discount_factor=DISCOUNT_FACTOR, scale=SCALING_FACTOR, alpha=ALPHA)
+    env = RacingEnv(track_name=TRACK_NAME, dt=0.1, discount_factor=DISCOUNT_FACTOR, scale=SCALING_FACTOR, alpha=ALPHA, cut_off_time=CUTOFF_TIME, fitness_function=FITNESS_FUNCTION)
     input_dim = expert_dataset[0][0].shape[0]
     output_dim = expert_dataset[0][1].shape[0]
     bc_actor = BCActor(input_dim, output_dim)
@@ -104,7 +107,7 @@ def main(skip_sim=False, skip_bc=False):
 
     # Step 4: Initialise TD3 with BC warm start
     logging.info("Step 4 - Initialising TD3 with BC warm start")
-    env = RacingEnv(track_name=TRACK_NAME, dt=0.1, discount_factor=DISCOUNT_FACTOR, scale=SCALING_FACTOR, alpha=ALPHA)
+    env = RacingEnv(track_name=TRACK_NAME, dt=0.1, discount_factor=DISCOUNT_FACTOR, scale=SCALING_FACTOR, alpha=ALPHA, cut_off_time=CUTOFF_TIME, fitness_function=FITNESS_FUNCTION)
 
     # Add action noise for TD3
     action_noise = NormalActionNoise(mean=np.zeros(env.action_space.shape[0]), sigma=ACTION_NOISE_STDDEV * np.ones(env.action_space.shape[0]))
