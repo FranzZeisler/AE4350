@@ -143,7 +143,7 @@ class RacingEnv(gym.Env):
             done = True
             info["termination"] = "lap_complete"
             info["lap_time"] = self.time
-            print(f"Lap time: {self.format_lap_time(self.time)}")
+            #print(f"Lap time: {self.format_lap_time(self.time)}")
             if self.time < self.best_lap_time:
                 self.best_lap_time = self.time
                 with open("log_best_lap_time.pkl", "wb") as f:
