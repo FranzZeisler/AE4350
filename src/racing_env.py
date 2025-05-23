@@ -7,7 +7,6 @@ from track import load_track, build_track_polygon
 from visualisation import plot_track_and_trajectory  # your helper
 import pickle
 
-
 # === Tunable global parameters ===
 
 MAX_TIME = 100.0       # Max episode duration (seconds)
