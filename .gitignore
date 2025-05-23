@@ -25,5 +25,11 @@ venv/
 *.pkl
 *.txt
 *.zip
-.csv
-.png
+
+# Ignore all CSV and PNG files globally
+*.csv
+*.png
+
+# But keep ones inside the 'data/' folder
+!data/**/*.csv
+!data/**/*.png
