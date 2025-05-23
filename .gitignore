@@ -20,8 +20,9 @@ env/
 venv/
 .venv/
 
-# Add .pth files, .pkl files, .txt files, .zip files
+# Add .pth files, .pkl files, .txt files, .zip files, and .csv files to the ignore list
 *.pth
 *.pkl
 *.txt
 *.zip
+.csv

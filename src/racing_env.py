@@ -17,7 +17,7 @@ MIN_LAP_TIME = 10.0    # Minimum time before lap can be considered complete (sec
 class RacingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, track_name, dt=0.1, discount_factor=0.98, scale=1.0):
+    def __init__(self, track_name, dt=0.1, discount_factor=0.98, scale=1.0, alpha=0.5):
         '''
         Initialize the Racing Environment.
         Args:
@@ -57,6 +57,7 @@ class RacingEnv(gym.Env):
         # Variable for fitness
         self.discount_factor = discount_factor
         self.reward_scaling = scale
+        self.alpha = alpha
 
         # Define finish line as a small line segment perpendicular to track start direction
         self.define_finish_line()
@@ -156,7 +157,7 @@ class RacingEnv(gym.Env):
             info["lap_time"] = 999.0
 
         # Calculate reward
-        reward = self.update_fitness()
+        reward = self.alternate_update_fitness()
 
         #Update number steps
         self.steps += 1
@@ -178,10 +179,34 @@ class RacingEnv(gym.Env):
         distance_progressed = self.total_length * self.compute_progress()
         time_elapsed = self.time
         discounted_reward = self.reward_scaling * distance_progressed * (self.discount_factor ** time_elapsed)
-
+        #print(self.reward_scaling, distance_progressed, self.discount_factor, time_elapsed, discounted_reward)
+        return discounted_reward
+    
+    def alternate_discounted_update_fitness(self):
+        """
+        Alternate reward function that combines progress and speed.
+        Encourages fast progress along the track.
+        """
+        distance_progressed = self.total_length * self.compute_progress()
+        time_elapsed = self.time
+        if self.time < 35:
+            time_elapsed = self.time
+        else:
+            time_elapsed = self.time - 35
+        discounted_reward = self.reward_scaling * distance_progressed * (self.discount_factor ** time_elapsed)
+        #print(self.reward_scaling, distance_progressed, self.discount_factor, time_elapsed, discounted_reward)
         return discounted_reward
 
-      
+    def alternate_update_fitness(self):
+        """
+        Alternate reward function that combines progress and speed.
+        Encourages fast progress along the track.
+        """
+        progress_reward = self.compute_progress()
+        speed_reward = self.car.speed / self.car.max_speed
+        return self.reward_scaling * (self.alpha * progress_reward + (1 - self.alpha) * speed_reward)
+        
+
     def compute_progress(self):
         """
         Computes the percentage of progress made along the track centerline (0.0 to 1.0).

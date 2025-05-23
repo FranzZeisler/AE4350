@@ -1,6 +1,8 @@
 import os
 import pickle
+from matplotlib import pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 import logging
 import warnings
@@ -32,7 +34,7 @@ EXPERT_DATASET_PATH = f"{TRACK_NAME}_expert_dataset.pkl"
 TD3_MODEL_PATH = f"td3_{TRACK_NAME}_with_bc.zip"
 BEST_LAP_LOG = "log_best_lap_time.pkl"
 LOG_DIR = "./logs_td3"
-
+LOG_FILE = "logs_td3/progress.csv"
 
 # === TD3 Hyperparameters ===
 LEARNING_RATE = 0.001
@@ -44,7 +46,7 @@ GAMMA = 0.99
 ACTION_NOISE_STDDEV = 0.0
 SEED = 42
 
-TD3_TIMESTEPS = 100000
+TD3_TIMESTEPS = 200
 
 def main(skip_sim=False, skip_bc=False):
     logging.info(f"Loading track: {TRACK_NAME}")
@@ -155,6 +157,21 @@ def main(skip_sim=False, skip_bc=False):
     model_bc.save(TD3_MODEL_PATH)
     logging.info(f"Step 5 - Completed training of TD3 model and saved model to {TD3_MODEL_PATH}")
 
+    # Show plot of rewards vs timesteps
+    df = pd.read_csv(LOG_FILE)
+    df = df.dropna(subset=["rollout/ep_rew_mean", "time/episodes"])
+    df["rollout/ep_rew_mean"] = pd.to_numeric(df["rollout/ep_rew_mean"])
+    df["time/episodes"] = pd.to_numeric(df["time/episodes"])
+    plt.figure(figsize=(10, 6))
+    plt.plot(df["time/episodes"], df["rollout/ep_rew_mean"], label="Episode Reward Mean", marker='o')
+    plt.xlabel("Episodes")
+    plt.ylabel("Mean Reward")
+    plt.title("TD3 Learning Curve")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
     # Step 6: Visualise best lap after training
     logging.info("Step 6 - Visualising best lap")
     try:
@@ -174,4 +191,4 @@ def main(skip_sim=False, skip_bc=False):
         logging.info(f"Step 6 - Failed to visualise best lap: {e}")
 
 # === Direct Call Here ===
-main(skip_sim=False, skip_bc=False)
+main(skip_sim=True, skip_bc=True)
