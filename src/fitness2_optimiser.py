@@ -29,8 +29,8 @@ TOTAL_TIMESTEPS = 200_000
 SEED = 42
 
 # === Search Space ===
-discount_factor_optimised=0.98 #Replace with the optimised value!!!!!!!!!!!!!!!!
-scale_optimised=1.0 #Replace with the optimised value!!!!!!!!!!!!!!!
+discount_factor_optimised=0.999 #Replace with the optimised value!!!!!!!!!!!!!!!!
+scale_optimised=69.0 #Replace with the optimised value!!!!!!!!!!!!!!!
 space = [
     Integer(30, 40, name="cutoff_time"),
 ]

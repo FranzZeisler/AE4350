@@ -24,15 +24,15 @@ logging.basicConfig(filename='log.txt', filemode='w', level=logging.INFO,
 
 # === Configurable Parameters ===
 TRACK_NAME = "Spielberg"
-DISCOUNT_FACTOR = 0.98
-SCALING_FACTOR = 1.0
-ALPHA = 0.5
-CUTOFF_TIME = 35.0
-FITNESS_FUNCTION = 1
+DISCOUNT_FACTOR = 0.999
+SCALING_FACTOR = 69.0
+ALPHA = 0.62
+CUTOFF_TIME = 31.0
+FITNESS_FUNCTION = 2
 
 # === Fixed Constant Behavioural Cloning ===
 BC_EPOCHS = 300
-TD3_TIMESTEPS = 1000
+TD3_TIMESTEPS = 1_000_000
 
 #=== File Paths ===
 BC_WEIGHTS_PATH = f"bc_actor_{TRACK_NAME}.pth"
@@ -115,13 +115,6 @@ def main(skip_sim=False, skip_bc=False):
     model_bc = TD3(
         policy="MlpPolicy",
         env=env,
-        learning_rate=LEARNING_RATE,
-        buffer_size=BUFFER_SIZE,
-        learning_starts=LEARNING_STARTS,
-        batch_size=BATCH_SIZE,
-        tau=TAU,
-        gamma=GAMMA,
-        action_noise=action_noise,
         verbose=0,
         seed=SEED,
     )
@@ -133,6 +126,7 @@ def main(skip_sim=False, skip_bc=False):
     new_logger.record("config/track_name", TRACK_NAME)
     new_logger.record("config/discount_factor", DISCOUNT_FACTOR)
     new_logger.record("config/scaling_factor", SCALING_FACTOR)
+    new_logger.record("config/alpha", ALPHA)
     new_logger.record("config/bc_epochs", BC_EPOCHS)
     new_logger.record("config/td3_timesteps", TD3_TIMESTEPS)
     new_logger.record("config/learning_rate", LEARNING_RATE)
