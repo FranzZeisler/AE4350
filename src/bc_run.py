@@ -25,10 +25,10 @@ logging.basicConfig(filename='log.txt', filemode='w', level=logging.INFO,
 # === Configurable Parameters ===
 TRACK_NAME = "Spielberg"
 DISCOUNT_FACTOR = 0.999
-SCALING_FACTOR = 69.0
+SCALING_FACTOR = 73.0
 ALPHA = 0.62
 CUTOFF_TIME = 31.0
-FITNESS_FUNCTION = 2
+FITNESS_FUNCTION = 3
 
 # === Fixed Constant Behavioural Cloning ===
 BC_EPOCHS = 300
@@ -170,6 +170,9 @@ def main(skip_sim=False, skip_bc=False):
     plt.tight_layout()
     plt.show()
     plt.savefig(f"{TRACK_NAME}_reward_curve_{TD3_TIMESTEPS}.png")
+    plt.close()
+
+    logging.info(f"📈 Saved learning curve to {TRACK_NAME}_reward_curve_{TD3_TIMESTEPS}.png\n")
 
 
     # Step 6: Visualise best lap after training
@@ -191,4 +194,4 @@ def main(skip_sim=False, skip_bc=False):
         logging.info(f"Step 6 - Failed to visualise best lap: {e}")
 
 # === Direct Call Here ===
-main(skip_sim=False, skip_bc=False)
+main(skip_sim=True, skip_bc=True)
