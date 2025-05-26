@@ -29,13 +29,11 @@ EXPERT_DATASET_PATH = f"{TRACK_NAME}_expert_dataset.pkl"
 LOG_DIR = "./logs_td3_phase3"
 FIGURES_DIR = "./td3_phase3_curves"
 
-DISCOUNT_FACTOR = 0.98
-SCALING_FACTOR = 1.0
-ALPHA = 0.5
-CUTOFF_TIME = 35.0
-FITNESS_FUNCTION = 1
+SCALING_FACTOR = 73.0
+ALPHA = 0.62
+FITNESS_FUNCTION = 3
 
-TOTAL_TIMESTEPS = 1000
+TOTAL_TIMESTEPS = 200_000
 SEED = 42
 
 # === Hyperparameter Search Space Definitions ===
@@ -64,8 +62,7 @@ def objective(**params):
     input_dim = expert_dataset[0][0].shape[0]
     output_dim = expert_dataset[0][1].shape[0]
 
-    env = RacingEnv(track_name=TRACK_NAME, discount_factor=DISCOUNT_FACTOR, scale=SCALING_FACTOR,
-                    alpha=ALPHA, cut_off_time=CUTOFF_TIME, fitness_function=FITNESS_FUNCTION)
+    env = RacingEnv(track_name=TRACK_NAME, scale=SCALING_FACTOR, alpha=ALPHA, fitness_function=FITNESS_FUNCTION)
 
     # Default TD3 parameters
     model_kwargs = {
@@ -99,7 +96,7 @@ def objective(**params):
         for bc_param, td3_param in zip(bc_actor.parameters(), model.policy.actor.parameters()):
             td3_param.copy_(bc_param)
 
-    model.learn(total_timesteps=TOTAL_TIMESTEPS)
+    model.learn(total_timesteps=TOTAL_TIMESTEPS, progress_bar=True)
 
     # Get best lap time
     best_lap_time = getattr(env, "best_lap_time", 0.0)
@@ -124,14 +121,14 @@ def objective(**params):
     plt.close()
 
     print(f"📈 Saved reward curve to {plot_path}")
-    return -df["rollout/ep_rew_mean"].iloc[-1]
+    return best_lap_time
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore", category=UserWarning)
     results = gp_minimize(
         func=objective,
         dimensions=space,
-        n_calls=10,
+        n_calls=5,
         n_initial_points=3,
         random_state=SEED,
         verbose=True
