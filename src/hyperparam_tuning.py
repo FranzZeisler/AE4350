@@ -99,8 +99,12 @@ def objective(**params):
     model.learn(total_timesteps=TOTAL_TIMESTEPS, progress_bar=True)
 
     # Get best lap time
-    best_lap_time = getattr(env, "best_lap_time", 0.0)
-    print(f"🏁 Best lap time: {best_lap_time:.2f} seconds")
+    best_lap_time = getattr(env, "best_lap_time", None)
+    if best_lap_time is None or best_lap_time <= 0.0:
+        print("⚠️ Warning: Invalid lap time detected. Assigning large penalty.")
+        best_lap_time = 9999.0  # Penalty for failed runs
+    else:
+        print(f"🏁 Best lap time: {best_lap_time:.2f} seconds")
 
     df = pd.read_csv(LOG_FILE)
     df = df.dropna(subset=["rollout/ep_rew_mean", "time/episodes"])
