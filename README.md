@@ -41,7 +41,7 @@ The training pipeline consists of four key stages:
 
 The agent observes key features such as distance to track boundaries, heading error, curvature, and speed. It outputs steering and throttle commands, driving the car in a closed simulation loop.
 
-### 4. Author
+## ✏️ Author
 
 This project was developed as part of the AE4350 – Bio-Inspired Intelligence for Aerospace course at TU Delft.
 
