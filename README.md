@@ -1,16 +1,15 @@
-# AE4350 – F1 Qualifying Lap Optimisation Using Evolutionary Learning
+# 🏎️ AE4350 – F1 Qualifying Lap Optimisation Using Evolutionary Learning
 
 ## 🚗 Project Summary
 
-The goal is to evolve a neural network controller that drives a car around various F1 tracks as fast as possible — simulating a qualifying lap. Instead of using gradient-based learning, the controller is trained using an evolutionary algorithm. The final policy is tested on held-out tracks to assess robustness.
+This project develops an autonomous F1 racing agent that learns to minimise qualifying lap times using a hybrid of **behavioural cloning (BC)** and **reinforcement learning (TD3)**. The agent is trained and evaluated on real-world circuits from the [TUMFTM racetrack-database](https://github.com/TUMFTM/racetrack-database).
 
 ## 🧠 Key Features
-
-- **Neuroevolution** of a small neural network for steering and throttle control
+- Hybrid learning pipeline: Behavioural Cloning → TD3 Reinforcement Learning
+- Custom racing environment using a kinematic bicycle model
+- Track-specific policy optimisation with reward functions balancing speed and smoothness
+- Lap time improvements from **74s (baseline)** to **62s (final agent)**
 - **Training on multiple real-world tracks** from the [TUMFTM racetrack-database](https://github.com/TUMFTM/racetrack-database)
-- **Fitness function** combining lap time with control smoothness and crash penalties
-- **Track generalization tests** on unseen circuits
-- **Visual comparison** between evolved racelines and reference minimum-curvature racing lines provided by the [TUMFTM racetrack-database](https://github.com/TUMFTM/racetrack-database)
 
 ## 🏁 Getting Started
 
@@ -26,18 +25,21 @@ pip install -r requirements.txt
 
 ### 3. How it works
 
-- Each agent is defined by a genome that maps directly to a neural network’s weights.
-- At each timestep, the agent receives a 17-dimensional input vector (including distances to walls, heading error, curvature, and speed).
-- The network outputs steering and throttle values, which are used to update the car's velocity and heading.
-- Agents are evaluated over multiple tracks using a fitness function combining:
+The training pipeline consists of four key stages:
 
-  - Lap time (minimized)
-  - Smoothness penalty (based on jerkiness of controls)
-  - Crash penalty (fixed high cost if the car leaves the track)
+1. **Expert Data Generation**  
+   A pure pursuit controller drives the car around the circuit to generate expert trajectories. This provides safe and reasonably fast baseline data.
 
-- The best-performing agents are selected for reproduction, where they undergo crossover and mutation to create a new generation.
-- This process is repeated for a set number of generations or until convergence.
-- The final evolved controller is tested on both seen and unseen tracks to evaluate performance and generalization.
+2. **Behavioural Cloning (BC)**  
+   A neural network policy is trained to imitate the expert's steering and throttle actions via supervised learning. This gives the agent a strong starting point.
+
+3. **Reinforcement Learning (TD3)**  
+   The cloned policy is fine-tuned using Twin Delayed Deep Deterministic Policy Gradient (TD3). The agent interacts with the environment to further reduce lap times and improve control smoothness.
+
+4. **Evaluation**  
+   The final policy is tested on the training track and optionally on unseen circuits. Performance is assessed based on lap time and qualitative raceline analysis.
+
+The agent observes key features such as distance to track boundaries, heading error, curvature, and speed. It outputs steering and throttle commands, driving the car in a closed simulation loop.
 
 ### 4. Author
 
