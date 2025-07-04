@@ -15,9 +15,9 @@ This project develops an autonomous F1 racing agent that learns to minimise qual
 
 ### 1. Clone This Repo
 
-Using HTTPS: https://github.com/FranzZeisler/AE4350.git
-Using SSH: git@github.com:FranzZeisler/AE4350.git
-Using GitHub CLI: gh repo clone FranzZeisler/AE4350
+- Using HTTPS: https://github.com/FranzZeisler/AE4350.git
+- Using SSH: git@github.com:FranzZeisler/AE4350.git
+- Using GitHub CLI: gh repo clone FranzZeisler/AE4350
 
 ### 2. Install Dependencies
 
